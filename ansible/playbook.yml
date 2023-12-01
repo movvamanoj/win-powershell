@@ -1,0 +1,36 @@
+---
+- name: Clone Private Git Repository on Windows
+  hosts: all
+  gather_facts: false
+  vars_files:
+    - vars.yml
+
+  tasks:
+ 
+    - name: Ensure temporary folder exists
+      ansible.builtin.win_file:
+        path: "{{ temp_folder }}"
+        state: directory
+    - name: Clone private Git repository
+      ansible.builtin.win_shell: |
+        if (Test-Path -Path "{{ temp_folder }}") {
+            Remove-Item -Path "{{ temp_folder }}" -Recurse -Force
+        }
+            git clone "{{ git_repo_url | regex_replace('https://', 'https://'+git_access_token+'@') }}" "{{ temp_folder }}"
+      args:
+        executable: powershell.exe
+      
+    - name: Copy win-ebs.ps1 to temp
+      ansible.builtin.win_shell: |
+        Copy-Item -Path "{{ temp_folder }}/ansible/win-ebs.ps1" -Destination "{{ temp_folder }}" -Force
+      become: true
+      become_user: Administrator
+      args:
+        executable: powershell.exe
+
+    - name: Execute PowerShell script
+      ansible.builtin.win_shell: |
+        Set-ExecutionPolicy Bypass -Scope Process -Force
+        . "{{ temp_folder }}/win-ebs.ps1"
+      become: true
+      become_user: Administrator

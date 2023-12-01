@@ -1,0 +1,17 @@
+---
+- name: Check Python location on Windows
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Find Python executable
+      win_shell: |
+        $pythonExe = (Get-Command python -ErrorAction SilentlyContinue).Source
+        if ($pythonExe) {
+          Write-Host "Python executable found at: $pythonExe"
+        } else {
+          Write-Host "Python not found"
+        }
+      register: python_result
+
+    - debug:
+        var: python_result.stdout_lines

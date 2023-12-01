@@ -1,0 +1,90 @@
+---
+- name: Run PowerShell script from private Git repository on remote Windows server
+  hosts: all
+  collections_paths:
+    - /home/mmanoj/.ansible/collections/ansible_collections
+  gather_facts: false
+  become: yes
+
+  vars_files:
+    - vars.yml
+
+  tasks:
+    - name: Retrieve GitHub credentials from HashiCorp Vault
+      community.hashivault.hashi_vault_read:
+        address: "{{ vault_address }}"
+        token: "{{ vault_token }}"
+        secret: "{{ vault_secret_path }}"
+        key: "{{ vault_key_username }}"
+      register: github_username
+
+    - name: Retrieve GitHub token from HashiCorp Vault
+      community.hashivault.hashi_vault_read:
+        address: "{{ vault_address }}"
+        token: "{{ vault_token }}"
+        secret: "{{ vault_secret_path }}"
+        key: "{{ vault_key_token }}"
+      register: github_token
+
+    - name: Clone Git repository with HTTPS and credentials
+      git:
+        repo: "{{ git_repo_url }}"
+        dest: "{{ git_clone_path }}"
+        version: main
+
+    - name: Copy PowerShell script to target machine
+      win_copy:
+        src: "{{ powershell_script_path }}"
+        dest: "{{ temp_dir }}\\tomcat.ps1"
+
+    - name: Execute PowerShell script
+      win_shell: |
+        Set-ExecutionPolicy RemoteSigned -Scope Process -Force
+        "{{ temp_dir }}\\tomcat.ps1"
+      become_user: Administrator
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+---
+- name: Copy win-ebs.ps1 to Windows server and execute
+  hosts: all
+  gather_facts: false
+
+  tasks:
+    - name: Copy win-ebs.ps1 to Windows temp directory
+      win_copy:
+        src: "{{ playbook_dir }}/win-ebs.ps1"
+        dest: C:\Windows\Temp\win-ebs.ps1
+
+    - name: Execute win-ebs.ps1 using PowerShell
+      win_shell: |
+        $ErrorActionPreference = "Stop"
+        & C:\Windows\Temp\win-ebs.ps1
+      register: script_result
+
+    - name: Display script execution status
+      debug:
+        msg: "Script executed {{ 'successfully' if script_result.rc == 0 else 'with errors' }}"

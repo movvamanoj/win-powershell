@@ -1,0 +1,39 @@
+
+
+
+
+
+
+
+
+
+
+# ---
+# - name: Install Git on Windows
+#   hosts: all
+#   gather_facts: true
+#   tasks:
+#     - name: Download Git installer
+#       win_get_url:
+#         url: https://github.com/git-for-windows/git/releases/download/v2.38.0.windows.1/Git-2.38.0-64-bit.exe
+#         dest: C:\Temp\GitInstaller.exe
+
+#     - name: Install Git
+#       win_shell: |
+#         Start-Process -Wait -FilePath C:\Temp\GitInstaller.exe -ArgumentList "/VERYSILENT /NORESTART /SUPPRESSMSGBOXES"
+
+#     - name: Check if Git is installed
+#       win_command: git --version
+#       register: git_version_output
+#       ignore_errors: true
+
+#     - debug:
+#         var: git_version_output.stdout_lines
+#       when: git_version_output.rc == 0
+
+#     - name: Get Git version
+#       win_shell: git --version
+#       register: git_version_output
+
+#     - debug:
+#         var: git_version_output.stdout_lines
