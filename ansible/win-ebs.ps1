@@ -66,4 +66,3 @@ if (Test-DriveLetterInUse -DriveLetter $drive_name2) {
 
 Format-Volume -DriveLetter $drive_name1 -FileSystem NTFS -NewFileSystemLabel "SC1CALLS" -AllocationUnitSize 65536 -ErrorAction Stop
 # Format-Volume -DriveLetter $drive_name2 -FileSystem NTFS -NewFileSystemLabel "Local Disk" -AllocationUnitSize 65536 -ErrorAction Stop
-
