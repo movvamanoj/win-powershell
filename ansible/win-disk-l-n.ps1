@@ -1,4 +1,4 @@
-# Function to get the next available drive letter
+# Function to get the next available drive letter #v3
 function Get-NextAvailableDriveLetter {
     $usedDriveLetters = Get-Volume | Select-Object -ExpandProperty DriveLetter
     $alphabet = [char[]]('D'..'Z')
