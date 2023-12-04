@@ -1,12 +1,18 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
+=======
+>>>>>>> refs/remotes/origin/main
 ansible-playbook -i inventory_file.ini playbook.yml --ask-vault-pass
 ansible-vault encrypt vars.yml
 ansible-vault decrypt vars.yml
 
 
 
+<<<<<<< HEAD
 >>>>>>> f850dcf (win-confi-disk-attached)
+=======
+>>>>>>> refs/remotes/origin/main
 
 # Enable PowerShell Remoting
 Enable-PSRemoting -Force
