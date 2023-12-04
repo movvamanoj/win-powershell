@@ -1,4 +1,4 @@
-# Get the disk numbers dynamically
+# Specify the disk numbers
 $diskNumbers = (Get-Disk).Number
 
 # Function to get the next available drive letter
@@ -30,7 +30,7 @@ foreach ($diskNumber in $diskNumbers) {
     }
 }
 
-# Create a new partition on each disk with specific drive letters
+# Create a new partition on each disk with dynamically assigned drive letters
 $nextAvailableDriveLetters = @()
 
 foreach ($diskNumber in $diskNumbers) {
@@ -41,7 +41,7 @@ foreach ($diskNumber in $diskNumbers) {
         Write-Host "Drive letter $nextAvailableDriveLetter is already in use for Disk $diskNumber. Skipping partition creation."
     }
     else {
-        New-Partition -DiskNumber $diskNumber -UseMaximumSize -DriveLetter $nextAvailableDriveLetter
+        New-Partition -DiskNumber $diskNumber -UseMaximumSize -AssignDriveLetter
         Write-Host "Partition on Disk $diskNumber created with drive letter $nextAvailableDriveLetter."
     }
 }
