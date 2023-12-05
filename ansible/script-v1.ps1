@@ -1,14 +1,11 @@
-# Get all disk numbers on the system
+# Specify the disk numbers
 $diskNumbers = (Get-Disk).Number
-# Get the disk number where the OS is installed
-$osDiskNumber = (Get-WmiObject -Class Win32_DiskDrive | Where-Object { $_.DeviceID -eq 'PHYSICALDRIVE0' }).Index
 
 # Function to get the next available drive letter
 function Get-NextAvailableDriveLetter {
     $usedDriveLetters = Get-Volume | Select-Object -ExpandProperty DriveLetter
-    $alphabet = 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'A', 'B'
+    $alphabet = 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'
 
-   
     foreach ($letter in $alphabet) {
         if ($usedDriveLetters -notcontains $letter) {
             return $letter
@@ -16,6 +13,16 @@ function Get-NextAvailableDriveLetter {
     }
 
     throw "No available drive letters found."
+}
+
+# Function to test if a drive letter is in use
+function Test-DriveLetterInUse {
+    param (
+        [string]$DriveLetter
+    )
+
+    $usedDriveLetters = Get-Volume | Select-Object -ExpandProperty DriveLetter
+    return $usedDriveLetters -contains $DriveLetter
 }
 
 # Check if each disk is already initialized
@@ -38,7 +45,6 @@ $nextAvailableDriveLetters = @()
 
 foreach ($diskNumber in $diskNumbers) {
     $nextAvailableDriveLetter = Get-NextAvailableDriveLetter
-    $nextAvailableDriveLetters += $nextAvailableDriveLetter
 
     if (Test-DriveLetterInUse -DriveLetter $nextAvailableDriveLetter) {
         Write-Host "Drive letter $nextAvailableDriveLetter is already in use for Disk $diskNumber. Skipping partition creation."
@@ -50,22 +56,6 @@ foreach ($diskNumber in $diskNumbers) {
 }
 
 # Format the volumes with NTFS file system
-foreach ($diskNumber in $diskNumbers) {
-    # Skip initialization and formatting for local disk (C:) and OS disk (disk number 0)
-    if ($diskNumber -eq $osDiskNumber -or $nextAvailableDriveLetter -eq 'C') {
-        Write-Host "Skipping initialization and formatting for OS disk (Disk $osDiskNumber) and local disk (C:)."
-        continue
-    }
-
-    $nextAvailableDriveLetter = Get-NextAvailableDriveLetter
-
-    if (Test-DriveLetterInUse -DriveLetter $nextAvailableDriveLetter) {
-        Write-Host "Drive letter $nextAvailableDriveLetter is already in use for Disk $diskNumber. Skipping partition creation."
-    }
-    else {
-        New-Partition -DiskNumber $diskNumber -UseMaximumSize -DriveLetter $nextAvailableDriveLetter
-        Write-Host "Partition on Disk $diskNumber created with drive letter $nextAvailableDriveLetter."
-
-        Format-Volume -DriveLetter $nextAvailableDriveLetter -FileSystem NTFS -NewFileSystemLabel "SC1CALLS $diskNumber" -AllocationUnitSize 65536 -ErrorAction Stop
-    }
+for ($i = 0; $i -lt $diskNumbers.Count; $i++) {
+    Format-Volume -DriveLetter $nextAvailableDriveLetters[$i] -FileSystem NTFS -NewFileSystemLabel "SC1CALLS $i" -AllocationUnitSize 65536 -ErrorAction Stop
 }
