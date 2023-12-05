@@ -1,7 +1,7 @@
 # Function to get the next available drive letter
 function Get-NextAvailableDriveLetter {
     $usedDriveLetters = Get-Volume | Select-Object -ExpandProperty DriveLetter
-    $availableDriveLetters = [char[]]('D'..'Z' | Where-Object { $usedDriveLetters -notcontains $_ })
+    $availableDriveLetters = ('D'..'Z' | ForEach-Object { $_ } | Where-Object { $usedDriveLetters -notcontains $_ })
     
     if ($availableDriveLetters.Count -eq 0) {
         throw "No available drive letters found."
@@ -9,6 +9,7 @@ function Get-NextAvailableDriveLetter {
 
     return $availableDriveLetters[0]
 }
+
 
 # Function to check if a drive letter is in use
 function Test-DriveLetterInUse {
