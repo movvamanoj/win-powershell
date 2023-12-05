@@ -53,6 +53,8 @@ foreach ($diskNumber in $diskNumbers) {
     continue
   }
 
+  $disk = Get-Disk -Number $diskNumber
+
   if (Test-DriveLetterInUse -DriveLetter ($disk | Get-Partition | Where-Object { $_.DriveLetter })) {
     Write-Host "Skipping partition creation for Disk $diskNumber (Already has a drive letter)."
     continue
@@ -64,9 +66,17 @@ foreach ($diskNumber in $diskNumbers) {
     Write-Host "Drive letter $driveLetter is already in use for Disk $diskNumber. Skipping partition creation."
   }
   else {
-    New-Partition -DiskNumber $diskNumber -UseMaximumSize -DriveLetter $driveLetter
-    Write-Host "Partition on Disk $diskNumber created with drive letter $driveLetter."
-    $assignedDriveLetters += $driveLetter
+    $existingPartitionWithLetter = Get-Partition -DiskNumber $diskNumber -DriveLetter $driveLetter
+    if ($existingPartitionWithLetter -eq $null) {
+      # Drive letter exists but not assigned to a partition, create a new partition with that letter
+      New-Partition -DiskNumber $diskNumber -UseMaximumSize -DriveLetter $driveLetter
+      Write-Host "Partition on Disk $diskNumber created with drive letter $driveLetter."
+      $assignedDriveLetters += $driveLetter
+    }
+    else {
+      # Drive letter is already assigned to an existing partition, skip creating a new partition
+      Write-Host "Drive letter $driveLetter is already assigned to an existing partition on Disk $diskNumber. Skipping partition creation."
+    }
   }
 }
 
@@ -80,8 +90,4 @@ for ($i = 0; $i -lt $assignedDriveLetters.Count; $i++) {
     continue
   }
 
-  Format-Volume -DriveLetter $driveLetter -FileSystem NTFS -NewFileSystemLabel "SC1CALLS $volumeIndex" -AllocationUnitSize 65536 -Confirm:$false
-  Write-Host "Formatted volume with drive letter $driveLetter and label SC1CALLS $volumeIndex."
-
-  $volumeIndex++
-}
+  Format-Volume -DriveLetter $driveLetter -FileSystem NTFS -NewFileSystemLabel "SC1CALLS $volumeIndex" -AllocationUnitSize
