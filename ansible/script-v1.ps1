@@ -46,9 +46,7 @@ foreach ($diskNumber in $diskNumbers) {
     Write-Host "Disk $diskNumber initialized."
 }
 
-# Create a new partition on each disk with specific drive letters
-$nextAvailableDriveLetters = @()
-
+# Create a new partition on each disk
 foreach ($diskNumber in $diskNumbers) {
     # Skip Disk 0 (OS disk)
     if ($diskNumber -eq 0) {
@@ -62,28 +60,20 @@ foreach ($diskNumber in $diskNumbers) {
         continue
     }
 
-    $nextAvailableDriveLetter = Get-NextAvailableDriveLetter
-
-    if (Test-DriveLetterInUse -DriveLetter $nextAvailableDriveLetter) {
-        Write-Host "Drive letter $nextAvailableDriveLetter is already in use for Disk $diskNumber. Skipping partition creation."
-    }
-    else {
-        New-Partition -DiskNumber $diskNumber -UseMaximumSize -DriveLetter $nextAvailableDriveLetter
-        Write-Host "Partition on Disk $diskNumber created with drive letter $nextAvailableDriveLetter."
-        $nextAvailableDriveLetters += $nextAvailableDriveLetter
-    }
+    New-Partition -DiskNumber $diskNumber -UseMaximumSize
+    Write-Host "Partition on Disk $diskNumber created."
 }
 
 # Format the volumes with NTFS file system and specific label
-for ($i = 0; $i -lt $nextAvailableDriveLetters.Count; $i++) {
-    $driveLetter = $nextAvailableDriveLetters[$i]
-
+foreach ($diskNumber in $diskNumbers) {
     # Skip Disk 0 (OS disk)
-    if ($i -eq 0) {
+    if ($diskNumber -eq 0) {
         Write-Host "Skipping formatting for Disk 0 (OS disk)."
         continue
     }
 
-    Format-Volume -DriveLetter $driveLetter -FileSystem NTFS -NewFileSystemLabel "SC1CALLS $i" -AllocationUnitSize 65536 -Confirm:$false
-    Write-Host "Formatted volume with drive letter $driveLetter and label SC1CALLS $i."
+    $nextAvailableDriveLetter = Get-NextAvailableDriveLetter
+
+    Format-Volume -DriveLetter $nextAvailableDriveLetter -FileSystem NTFS -NewFileSystemLabel "SC1CALLS $diskNumber" -AllocationUnitSize 65536 -Confirm:$false
+    Write-Host "Formatted volume with drive letter $nextAvailableDriveLetter and label SC1CALLS $diskNumber."
 }
