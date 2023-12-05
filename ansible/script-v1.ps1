@@ -5,18 +5,32 @@ Write-Host "Existing disk letters: $($existingDiskLetters -join ', ')"
 # Specify the disk numbers
 $diskNumbers = (Get-Disk).Number
 
+# Add a lock to ensure atomic execution of the function
+$lock = [System.Threading.Mutex]::new()
+
 # Function to get the next available drive letter
 function Get-NextAvailableDriveLetter {
-    $usedDriveLetters = Get-Volume | Select-Object -ExpandProperty DriveLetter
-    $alphabet = 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'
+    param (
+        [string[]]$UsedDriveLetters
+    )
 
-    foreach ($letter in $alphabet) {
-        if ($usedDriveLetters -notcontains $letter) {
-            return $letter
+    # Acquire the lock
+    $lock.WaitOne()
+
+    try {
+        $alphabet = 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'
+
+        foreach ($letter in $alphabet) {
+            if ($UsedDriveLetters -notcontains $letter) {
+                return $letter
+            }
         }
-    }
 
-    throw "No available drive letters found."
+        throw "No available drive letters found."
+    } finally {
+        # Release the lock
+        $lock.ReleaseMutex()
+    }
 }
 
 # Function to test if a drive letter is in use
@@ -66,7 +80,7 @@ foreach ($diskNumber in $diskNumbers) {
         continue
     }
 
-    $nextAvailableDriveLetter = Get-NextAvailableDriveLetter
+    $nextAvailableDriveLetter = Get-NextAvailableDriveLetter -UsedDriveLetters $existingDiskLetters
 
     if (Test-DriveLetterInUse -DriveLetter $nextAvailableDriveLetter) {
         Write-Host "Drive letter $nextAvailableDriveLetter is already in use for Disk $diskNumber. Skipping partition creation."
@@ -78,7 +92,7 @@ foreach ($diskNumber in $diskNumbers) {
 
         New-Partition -DiskNumber $diskNumber -UseMaximumSize -DriveLetter $newVolumeDriveLetter
         Write-Host "Partition on Disk $diskNumber created with drive letter $newVolumeDriveLetter and volume name $newVolumeName."
-        $nextAvailableDriveLetters += $nextAvailableDriveLetter
+        $nextAvailableDriveLetters += $newVolumeDriveLetter
     }
 }
 
