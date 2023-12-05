@@ -61,7 +61,10 @@ foreach ($diskNumber in $diskNumbers) {
         continue
     }
 
-    $nextAvailableDriveLetter = Get-NextAvailableDriveLetter
+    # Try assigning a unique drive letter until one is found
+    do {
+        $nextAvailableDriveLetter = Get-NextAvailableDriveLetter
+    } while (Test-DriveLetterAssigned -DiskNumber $diskNumber)
 
     New-Partition -DiskNumber $diskNumber -UseMaximumSize -AssignDriveLetter
     Format-Volume -DriveLetter $nextAvailableDriveLetter -FileSystem NTFS -NewFileSystemLabel "SC1CALLS $diskNumber" -AllocationUnitSize 65536 -Confirm:$false
