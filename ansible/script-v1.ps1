@@ -16,7 +16,7 @@ function Get-NextAvailableDriveLetter {
     }
 
     foreach ($letter in $alphabet) {
-        if ($usedDriveLetters -notcontains $letter) {
+        if ($usedDriveLetters -notcontains $letter -and $letter -ne 'C') {
             return $letter
         }
     }
