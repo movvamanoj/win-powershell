@@ -19,8 +19,15 @@ function Get-NextAvailableDriveLetter {
 foreach ($diskNumber in $diskNumbers) {
     $disk = Get-Disk -Number $diskNumber
 
-    # Check if the disk is not online or not initialized
-    if ($disk.IsOffline -or ($disk.PartitionStyle -eq 'RAW')) {
+    # Check if the disk is offline
+    if ($disk.IsOffline) {
+        # Bring the disk online
+        Set-Disk -Number $diskNumber -IsOffline $false
+        Write-Host "Disk $diskNumber is brought online."
+    }
+
+    # Check if the disk is not initialized
+    if ($disk.PartitionStyle -eq 'RAW') {
         # Initialize the disk with GPT partition style
         Initialize-Disk -Number $diskNumber -PartitionStyle GPT
         Write-Host "Disk $diskNumber initialized."
