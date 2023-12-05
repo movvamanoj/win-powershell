@@ -1,7 +1,7 @@
 # Specify the disk numbers
 $diskNumbers = (Get-Disk).Number
 
-# Function to get the next available drive letter based on disk number
+# Function to get the next available drive letter based on existing drive letters
 function Get-NextAvailableDriveLetter {
     param (
         [int]$DiskNumber
