@@ -16,8 +16,13 @@ else {
     foreach ($disk in $attachedDisks) {
         $diskNumber = $disk.Number
 
+        # Debug information
+        Write-Host "Checking Disk $diskNumber"
+
         # Check if the disk already has a drive letter allocated
         $volume = Get-Partition -DiskNumber $diskNumber | Get-Volume
+        Write-Host "Drive Letter: $($volume.DriveLetter)"
+
         if ($volume.DriveLetter -ne $null) {
             Write-Host "Skipping Disk $diskNumber as it already has an allocated drive letter: $($volume.DriveLetter)"
         }
@@ -33,6 +38,7 @@ else {
             }
         }
     }
+
 
 # Step 2: Formatting - Format the volumes with NTFS file system for disks that are initialized
 foreach ($disk in $attachedDisks) {
