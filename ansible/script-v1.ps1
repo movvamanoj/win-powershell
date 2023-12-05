@@ -85,7 +85,7 @@ foreach ($diskNumber in $diskNumbers) {
         continue
     }
 
-    $driveLetter = Get-Volume -FileSystemLabel "SC1CALLS $($diskNumber - 1)" | Select-Object -ExpandProperty DriveLetter
+    $driveLetter = Get-Partition -DiskNumber $diskNumber | Select-Object -ExpandProperty DriveLetter
 
     Format-Volume -DriveLetter $driveLetter -FileSystem NTFS -NewFileSystemLabel "SC1CALLS $diskNumber" -AllocationUnitSize 65536 -Confirm:$false
     Write-Host "Formatted volume with drive letter $driveLetter and label SC1CALLS $diskNumber."
