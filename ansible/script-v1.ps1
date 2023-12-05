@@ -1,26 +1,19 @@
 # Specify the disk numbers
 $diskNumbers = (Get-Disk).Number
 
-# Function to get the next available drive letter based on disk number
+# Function to get the next available drive letter
 function Get-NextAvailableDriveLetter {
-    param (
-        [int]$DiskNumber
-    )
+  $usedDriveLetters = Get-Volume | Select-Object -ExpandProperty DriveLetter
+  $alphabet = 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'
 
-    $usedDriveLetters = Get-Volume | Select-Object -ExpandProperty DriveLetter
-    $alphabet = 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'
-
-    if ($DiskNumber -eq 0) {
-        return 'C'
+  foreach ($letter in $alphabet) {
+    if ($usedDriveLetters -notcontains $letter) {
+      $usedDriveLetters += $letter
+      return $letter
     }
+  }
 
-    $targetLetter = $alphabet[$DiskNumber - 1]
-
-    if ($usedDriveLetters -notcontains $targetLetter) {
-        return $targetLetter
-    }
-
-    throw "No available drive letters found for Disk $DiskNumber."
+  throw "No available drive letters found."
 }
 
 
@@ -96,4 +89,3 @@ for ($i = 0; $i -lt $nextAvailableDriveLetters.Count; $i++) {
     Format-Volume -DriveLetter $driveLetter -FileSystem NTFS -NewFileSystemLabel "SC1CALLS $i" -AllocationUnitSize 65536 -Confirm:$false
     Write-Host "Formatted volume with drive letter $driveLetter and label SC1CALLS $i."
 }
-
