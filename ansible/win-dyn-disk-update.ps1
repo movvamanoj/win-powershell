@@ -1,7 +1,20 @@
 # Dynamically retrieve all disk numbers
 $diskNumbers = Get-Disk | Where-Object { $_.IsOffline -eq $false } | Select-Object -ExpandProperty Number
 
-Write-Host "Step 1: Checking and initializing disks if needed"
+# Function to get the next available drive letter
+function Get-NextAvailableDriveLetter {
+    $usedDriveLetters = Get-Volume | Select-Object -ExpandProperty DriveLetter
+    $alphabet = [char[]]('D'..'Z')
+   
+    foreach ($letter in $alphabet) {
+        if ($usedDriveLetters -notcontains $letter) {
+            return $letter
+        }
+    }
+
+    throw "No available drive letters found."
+}
+
 # Check if each disk is already initialized
 foreach ($diskNumber in $diskNumbers) {
     $disk = Get-Disk -Number $diskNumber
@@ -17,7 +30,6 @@ foreach ($diskNumber in $diskNumbers) {
     }
 }
 
-Write-Host "Step 2: Creating partitions on each disk with specific drive letters"
 # Create a new partition on each disk with specific drive letters
 $nextAvailableDriveLetters = @()
 
@@ -36,7 +48,6 @@ foreach ($diskNumber in $diskNumbers) {
     }
 }
 
-Write-Host "Step 3: Formatting the volumes with the NTFS file system"
 # Format the volumes with the NTFS file system, but only if they are not already formatted
 foreach ($volume in Get-Volume -DriveLetter $nextAvailableDriveLetters -ErrorAction SilentlyContinue) {
     if ($volume.FileSystem -ne 'NTFS') {
@@ -47,5 +58,3 @@ foreach ($volume in Get-Volume -DriveLetter $nextAvailableDriveLetters -ErrorAct
         Write-Host "Volume $($volume.DriveLetter) is already formatted with NTFS. Skipping formatting."
     }
 }
-
-Write-Host "Script execution completed."
