@@ -63,6 +63,7 @@ foreach ($diskNumber in $diskNumbers) {
 
     $nextAvailableDriveLetter = Get-NextAvailableDriveLetter
 
+    New-Partition -DiskNumber $diskNumber -UseMaximumSize -AssignDriveLetter
     Format-Volume -DriveLetter $nextAvailableDriveLetter -FileSystem NTFS -NewFileSystemLabel "SC1CALLS $diskNumber" -AllocationUnitSize 65536 -Confirm:$false
     Write-Host "Formatted volume with drive letter $nextAvailableDriveLetter and label SC1CALLS $diskNumber."
 }
