@@ -18,10 +18,11 @@ function Get-NextAvailableDriveLetter {
 # Function to check if a drive letter is assigned to a disk
 function Test-DriveLetterAssigned {
     param (
-        [int]$DiskNumber
+        [int]$DiskNumber,
+        [string]$DriveLetter
     )
 
-    $assignedDriveLetter = Get-Partition -DiskNumber $DiskNumber | Where-Object { $_.DriveLetter } | Select-Object -ExpandProperty DriveLetter
+    $assignedDriveLetter = Get-Partition -DiskNumber $DiskNumber | Where-Object { $_.DriveLetter -eq $DriveLetter } | Select-Object -ExpandProperty DriveLetter
     return [bool]($assignedDriveLetter -ne $null)
 }
 
@@ -36,7 +37,7 @@ foreach ($diskNumber in $diskNumbers) {
     $disk = Get-Disk -Number $diskNumber
 
     # Skip if the disk is already initialized or has a drive letter
-    if ($disk.IsOffline -or ($disk.PartitionStyle -eq 'RAW') -or (Test-DriveLetterAssigned -DiskNumber $diskNumber)) {
+    if ($disk.IsOffline -or ($disk.PartitionStyle -eq 'RAW') -or (Test-DriveLetterAssigned -DiskNumber $diskNumber -DriveLetter 'D')) {
         Write-Host "Skipping initialization for Disk $diskNumber (Already initialized or has a drive letter)."
         continue
     }
@@ -54,19 +55,15 @@ foreach ($diskNumber in $diskNumbers) {
         continue
     }
 
+    $driveLetter = Get-NextAvailableDriveLetter
+
     # Skip if a drive letter is already assigned
-    if (Test-DriveLetterAssigned -DiskNumber $diskNumber) {
-        $assignedDriveLetter = Get-Partition -DiskNumber $diskNumber | Where-Object { $_.DriveLetter } | Select-Object -ExpandProperty DriveLetter
-        Write-Host "Drive letter $assignedDriveLetter is already assigned to Disk $diskNumber. Skipping formatting."
+    if (Test-DriveLetterAssigned -DiskNumber $diskNumber -DriveLetter $driveLetter) {
+        Write-Host "Drive letter $driveLetter is already assigned to Disk $diskNumber. Skipping formatting."
         continue
     }
 
-    # Try assigning a unique drive letter until one is found
-    do {
-        $nextAvailableDriveLetter = Get-NextAvailableDriveLetter
-    } while (Test-DriveLetterAssigned -DiskNumber $diskNumber)
-
     New-Partition -DiskNumber $diskNumber -UseMaximumSize -AssignDriveLetter
-    Format-Volume -DriveLetter $nextAvailableDriveLetter -FileSystem NTFS -NewFileSystemLabel "SC1CALLS $diskNumber" -AllocationUnitSize 65536 -Confirm:$false
-    Write-Host "Formatted volume with drive letter $nextAvailableDriveLetter and label SC1CALLS $diskNumber."
+    Format-Volume -DriveLetter $driveLetter -FileSystem NTFS -NewFileSystemLabel "SC1CALLS $diskNumber" -AllocationUnitSize 65536 -Confirm:$false
+    Write-Host "Formatted volume with drive letter $driveLetter and label SC1CALLS $diskNumber."
 }
