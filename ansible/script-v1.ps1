@@ -1,28 +1,28 @@
 # Specify the disk numbers
 $diskNumbers = (Get-Disk).Number
 
-# Function to get the next available drive letter based on existing drive letters
+# Function to get the next available drive letter based on disk number
 function Get-NextAvailableDriveLetter {
     param (
         [int]$DiskNumber
     )
 
     $usedDriveLetters = Get-Volume | Select-Object -ExpandProperty DriveLetter
-    $alphabet = 'A', 'B', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'
+    $alphabet = 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'
 
-    # Ensure Disk 0 gets 'C'
     if ($DiskNumber -eq 0) {
         return 'C'
     }
 
-    foreach ($letter in $alphabet) {
-        if ($usedDriveLetters -notcontains $letter -and $letter -ne 'C') {
-            return $letter
-        }
+    $targetLetter = $alphabet[$DiskNumber - 1]
+
+    if ($usedDriveLetters -notcontains $targetLetter) {
+        return $targetLetter
     }
 
     throw "No available drive letters found for Disk $DiskNumber."
 }
+
 
 # Function to test if a drive letter is in use
 function Test-DriveLetterInUse {
