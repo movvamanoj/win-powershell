@@ -1,36 +1,30 @@
-# Display existing disk letters
-$existingDiskLetters = Get-Volume | Where-Object { $_.DriveLetter -ne $null } | Select-Object -ExpandProperty DriveLetter
-Write-Host "Existing disk letters: $($existingDiskLetters -join ', ')"
+# Step 1: Get existing drive letters
+$existingDriveLetters = Get-Volume | Select-Object -ExpandProperty DriveLetter
 
-# Specify the disk numbers
-$diskNumbers = (Get-Disk).Number
-
-# Add a lock to ensure atomic execution of the function
-$lock = [System.Threading.Mutex]::new()
+# Step 2: Allocate drive letters based on disk numbers
+$allocatedDriveLetters = @{}
+foreach ($diskNumber in $diskNumbers) {
+    if ($diskNumber -eq 0) {
+        # Disk number 0 is typically the OS disk, so assign 'C' to it
+        $allocatedDriveLetters[$diskNumber] = 'C'
+    }
+    else {
+        # For other disks, allocate letters starting from 'D'
+        $allocatedDriveLetters[$diskNumber] = [char]([int]'D' + $diskNumber - 1)
+    }
+}
 
 # Function to get the next available drive letter
 function Get-NextAvailableDriveLetter {
-    param (
-        [string[]]$UsedDriveLetters
-    )
+    $alphabet = 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'
 
-    # Acquire the lock
-    $lock.WaitOne()
-
-    try {
-        $alphabet = 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'
-
-        foreach ($letter in $alphabet) {
-            if ($UsedDriveLetters -notcontains $letter) {
-                return $letter
-            }
+    foreach ($letter in $alphabet) {
+        if ($existingDriveLetters -notcontains $letter) {
+            return $letter
         }
-
-        throw "No available drive letters found."
-    } finally {
-        # Release the lock
-        $lock.ReleaseMutex()
     }
+
+    throw "No available drive letters found."
 }
 
 # Function to test if a drive letter is in use
@@ -68,31 +62,20 @@ foreach ($diskNumber in $diskNumbers) {
 $nextAvailableDriveLetters = @()
 
 foreach ($diskNumber in $diskNumbers) {
-    # Skip Disk 0 (OS disk)
     if ($diskNumber -eq 0) {
         Write-Host "Skipping partition creation for Disk 0 (OS disk)."
         continue
     }
 
-    # Skip if the disk already has a drive letter
-    if (Test-DriveLetterInUse -DriveLetter ($disk | Get-Partition | Where-Object { $_.DriveLetter })) {
-        Write-Host "Skipping partition creation for Disk $diskNumber (Already has a drive letter)."
-        continue
-    }
+    $allocatedDriveLetter = $allocatedDriveLetters[$diskNumber]
 
-    $nextAvailableDriveLetter = Get-NextAvailableDriveLetter -UsedDriveLetters ($existingDiskLetters + $nextAvailableDriveLetters)
-
-    if (Test-DriveLetterInUse -DriveLetter $nextAvailableDriveLetter) {
-        Write-Host "Drive letter $nextAvailableDriveLetter is already in use for Disk $diskNumber. Skipping partition creation."
+    if (Test-DriveLetterInUse -DriveLetter $allocatedDriveLetter) {
+        Write-Host "Drive letter $allocatedDriveLetter is already in use for Disk $diskNumber. Skipping partition creation."
     }
     else {
-        # Allocate drive letter and volume name for new EBS volumes
-        $newVolumeDriveLetter = $nextAvailableDriveLetter
-        $newVolumeName = "SC1CALL$diskNumber"
-
-        New-Partition -DiskNumber $diskNumber -UseMaximumSize -DriveLetter $newVolumeDriveLetter
-        Write-Host "Partition on Disk $diskNumber created with drive letter $newVolumeDriveLetter and volume name $newVolumeName."
-        $nextAvailableDriveLetters += $newVolumeDriveLetter
+        New-Partition -DiskNumber $diskNumber -UseMaximumSize -DriveLetter $allocatedDriveLetter
+        Write-Host "Partition on Disk $diskNumber created with drive letter $allocatedDriveLetter."
+        $nextAvailableDriveLetters += $allocatedDriveLetter
     }
 }
 
@@ -106,6 +89,7 @@ for ($i = 0; $i -lt $nextAvailableDriveLetters.Count; $i++) {
         continue
     }
 
-    Format-Volume -DriveLetter $driveLetter -FileSystem NTFS -NewFileSystemLabel "SC1CALLS$i" -AllocationUnitSize 65536 -Confirm:$false
-    Write-Host "Formatted volume with drive letter $driveLetter and label SC1CALLS$i."
+    Format-Volume -DriveLetter $driveLetter -FileSystem NTFS -NewFileSystemLabel "SC1CALLS $i" -AllocationUnitSize 65536 -Confirm:$false
+    Write-Host "Formatted volume with drive letter $driveLetter and label SC1CALLS $i."
 }
+
