@@ -42,9 +42,17 @@ $newlyAttachedDiskNumbers = Get-Disk | Where-Object { $existingDiskNumbers -notc
 
 # Initialize and create partitions for newly attached disks
 foreach ($diskNumber in $newlyAttachedDiskNumbers) {
-    # Initialize the disk with GPT partition style
-    Initialize-Disk -Number $diskNumber -PartitionStyle GPT
-    Write-Host "Newly attached disk $diskNumber initialized."
+    $disk = Get-Disk -Number $diskNumber
+
+    # Check if the disk is not online or not initialized
+    if ($disk.IsOffline -or ($disk.PartitionStyle -eq 'RAW')) {
+        # Initialize the disk with GPT partition style
+        Initialize-Disk -Number $diskNumber -PartitionStyle GPT
+        Write-Host "Newly attached disk $diskNumber initialized."
+    }
+    else {
+        Write-Host "Newly attached disk $diskNumber is already initialized. Skipping initialization."
+    }
 
     $nextAvailableDriveLetter = Get-NextAvailableDriveLetter
 
