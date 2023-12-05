@@ -44,13 +44,13 @@ foreach ($diskNumber in $diskNumbersToProcess) {
         if ($disk.IsOffline -or ($disk.PartitionStyle -eq 'RAW')) {
             # Initialize the disk with GPT partition style
             Initialize-Disk -Number $diskNumber -PartitionStyle GPT
-            Write-Host "Disk $diskNumber initialized."
+            Write-Host "Disk $($diskNumber) initialized."
         }
         else {
-            Write-Host "Disk $diskNumber is already initialized. Skipping initialization."
+            Write-Host "Disk $($diskNumber) is already initialized. Skipping initialization."
         }
     } catch {
-        Write-Host "Error initializing Disk $diskNumber: $_"
+        Write-Host "Error initializing Disk $($diskNumber): $_"
     }
 }
 
@@ -62,14 +62,14 @@ foreach ($diskNumber in $diskNumbersToProcess) {
     $nextAvailableDriveLetters += $nextAvailableDriveLetter
 
     if (Test-DriveLetterInUse -DriveLetter $nextAvailableDriveLetter) {
-        Write-Host "Drive letter $nextAvailableDriveLetter is already in use for Disk $diskNumber. Skipping partition creation."
+        Write-Host "Drive letter $($nextAvailableDriveLetter) is already in use for Disk $($diskNumber). Skipping partition creation."
     }
     else {
         try {
             New-Partition -DiskNumber $diskNumber -UseMaximumSize -DriveLetter $nextAvailableDriveLetter
-            Write-Host "Partition on Disk $diskNumber created with drive letter $nextAvailableDriveLetter."
+            Write-Host "Partition on Disk $($diskNumber) created with drive letter $($nextAvailableDriveLetter)."
         } catch {
-            Write-Host "Error creating partition on Disk $diskNumber: $_"
+            Write-Host "Error creating partition on Disk $($diskNumber): $_"
         }
     }
 }
