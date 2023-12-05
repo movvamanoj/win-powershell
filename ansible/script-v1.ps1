@@ -64,8 +64,6 @@ foreach ($diskNumber in $diskNumbers) {
     Write-Host "Disk $diskNumber initialized."
 }
 
-# ...
-
 # Create a new partition on each disk with specific drive letters
 $nextAvailableDriveLetters = @()
 
@@ -82,7 +80,7 @@ foreach ($diskNumber in $diskNumbers) {
         continue
     }
 
-    $nextAvailableDriveLetter = Get-NextAvailableDriveLetter -UsedDriveLetters $existingDiskLetters
+    $nextAvailableDriveLetter = Get-NextAvailableDriveLetter -UsedDriveLetters ($existingDiskLetters + $nextAvailableDriveLetters)
 
     if (Test-DriveLetterInUse -DriveLetter $nextAvailableDriveLetter) {
         Write-Host "Drive letter $nextAvailableDriveLetter is already in use for Disk $diskNumber. Skipping partition creation."
