@@ -1,7 +1,7 @@
 git_repo_url: "https://github.com/movvamanoj/win-powershell.git"
 git_access_token: "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"
 temp_folder: "C:\\Temp\\win-powershell"
-temp_path: "C:\\Temp\\"
+temp_path: "C:\\Temp"
 script_path: "\\ansible\\script-v1.ps1"
 script_name: "script-v1.ps1"
 ansible_python_interpreter: C:\\Python312\\python.exe
