@@ -39,9 +39,12 @@ foreach ($diskNumber in $diskNumbers) {
         Write-Host "Drive letter $nextAvailableDriveLetter is already in use for Disk $diskNumber. Skipping partition creation."
     }
     else {
-        New-Partition -DiskNumber $diskNumber -UseMaximumSize -DriveLetter $nextAvailableDriveLetter
+        # Create a new partition and assign the drive letter
+        $partition = New-Partition -DiskNumber $diskNumber -UseMaximumSize
+        Add-PartitionAccessPath -DiskNumber $diskNumber -PartitionNumber $partition.PartitionNumber -AccessPath $nextAvailableDriveLetter
+
         Write-Host "Partition on Disk $diskNumber created with drive letter $nextAvailableDriveLetter."
-        
+
         # Format the volume with NTFS file system and dynamic volume label
         Format-Volume -DriveLetter $nextAvailableDriveLetter -FileSystem NTFS -NewFileSystemLabel $volumeLabel -AllocationUnitSize 65536 -ErrorAction Stop
     }
