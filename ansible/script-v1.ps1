@@ -32,20 +32,25 @@ foreach ($diskNumber in $diskNumbers) {
 
 # Create a new partition on each disk with specific drive letters and dynamic volume label
 foreach ($diskNumber in $diskNumbers) {
-    $nextAvailableDriveLetter = Get-NextAvailableDriveLetter
-    $volumeLabel = "SC1CALL$diskNumber"
+    $disk = Get-Disk -Number $diskNumber
+
+    # Check if the disk is not partitioned
+    if ($disk.Partitions.Count -eq 0) {
+        $nextAvailableDriveLetter = Get-NextAvailableDriveLetter
+        $volumeLabel = "SC1CALL$diskNumber"
     
-    if (Test-DriveLetterInUse -DriveLetter $nextAvailableDriveLetter) {
-        Write-Host "Drive letter $nextAvailableDriveLetter is already in use for Disk $diskNumber. Skipping partition creation."
+        if (Test-DriveLetterInUse -DriveLetter $nextAvailableDriveLetter) {
+            Write-Host "Drive letter $nextAvailableDriveLetter is already in use for Disk $diskNumber. Skipping partition creation."
+        }
+        else {
+            New-Partition -DiskNumber $diskNumber -UseMaximumSize -DriveLetter $nextAvailableDriveLetter
+            Write-Host "Partition on Disk $diskNumber created with drive letter $nextAvailableDriveLetter."
+            
+            # Format the volume with NTFS file system and dynamic volume label
+            Format-Volume -DriveLetter $nextAvailableDriveLetter -FileSystem NTFS -NewFileSystemLabel $volumeLabel -AllocationUnitSize 65536 -ErrorAction Stop
+        }
     }
     else {
-        # Create a new partition and assign the drive letter
-        $partition = New-Partition -DiskNumber $diskNumber -UseMaximumSize
-        Add-PartitionAccessPath -DiskNumber $diskNumber -PartitionNumber $partition.PartitionNumber -AccessPath $nextAvailableDriveLetter
-
-        Write-Host "Partition on Disk $diskNumber created with drive letter $nextAvailableDriveLetter."
-
-        # Format the volume with NTFS file system and dynamic volume label
-        Format-Volume -DriveLetter $nextAvailableDriveLetter -FileSystem NTFS -NewFileSystemLabel $volumeLabel -AllocationUnitSize 65536 -ErrorAction Stop
+        Write-Host "Disk $diskNumber is already partitioned. Skipping partition creation, drive letter allocation, and volume label assignment."
     }
 }
