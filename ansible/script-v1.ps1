@@ -15,17 +15,6 @@ function Get-NextAvailableDriveLetter {
     throw "No available drive letters found."
 }
 
-# Function to check if a drive letter is assigned to a disk
-function Test-DriveLetterAssigned {
-    param (
-        [int]$DiskNumber,
-        [string]$DriveLetter
-    )
-
-    $assignedDriveLetter = Get-Partition -DiskNumber $DiskNumber | Where-Object { $_.DriveLetter -eq $DriveLetter } | Select-Object -ExpandProperty DriveLetter
-    return [bool]($assignedDriveLetter -ne $null)
-}
-
 # Check if each disk is already initialized and has a drive letter
 foreach ($diskNumber in $diskNumbers) {
     # Skip Disk 0 (OS disk)
@@ -37,7 +26,7 @@ foreach ($diskNumber in $diskNumbers) {
     $disk = Get-Disk -Number $diskNumber
 
     # Skip if the disk is already initialized or has a drive letter
-    if ($disk.IsOffline -or ($disk.PartitionStyle -eq 'RAW') -or (Test-DriveLetterAssigned -DiskNumber $diskNumber -DriveLetter 'D')) {
+    if ($disk.IsOffline -or ($disk.PartitionStyle -eq 'RAW') -or (Get-Partition -DiskNumber $diskNumber | Where-Object { $_.DriveLetter })) {
         Write-Host "Skipping initialization for Disk $diskNumber (Already initialized or has a drive letter)."
         continue
     }
@@ -58,8 +47,8 @@ foreach ($diskNumber in $diskNumbers) {
     $driveLetter = Get-NextAvailableDriveLetter
 
     # Skip if a drive letter is already assigned
-    if (Test-DriveLetterAssigned -DiskNumber $diskNumber -DriveLetter $driveLetter) {
-        Write-Host "Drive letter $driveLetter is already assigned to Disk $diskNumber. Skipping formatting."
+    if (Get-Partition -DiskNumber $diskNumber | Where-Object { $_.DriveLetter }) {
+        Write-Host "Drive letter is already assigned to Disk $diskNumber. Skipping formatting."
         continue
     }
 
