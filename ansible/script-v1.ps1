@@ -1,5 +1,5 @@
-# Dynamically retrieve all disk numbers
-$diskNumbers = Get-Disk | Where-Object { $_.IsOffline -eq $false } | Select-Object -ExpandProperty Number
+# Dynamically retrieve all disk numbers, including offline disks
+$diskNumbers = Get-Disk | Select-Object -ExpandProperty Number
 
 # Function to get the next available drive letter
 function Get-NextAvailableDriveLetter {
@@ -22,9 +22,7 @@ foreach ($diskNumber in $diskNumbers) {
     # Check if the disk is offline
     if ($disk.IsOffline) {
         # Bring the disk online
-        Set-Disk -Number $diskNumber -IsOffline $false
-        # Wait for a moment to ensure the disk is online
-        Start-Sleep -Seconds 30
+        Start-Process -Wait -FilePath "C:\Windows\System32\diskpart.exe" -ArgumentList "/s C:\Temp\online-diskpart-script.txt"
         Write-Host "Disk $diskNumber is brought online."
     }
 
