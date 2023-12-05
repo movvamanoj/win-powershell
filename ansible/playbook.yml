@@ -31,6 +31,6 @@
     - name: Execute PowerShell script
       ansible.builtin.win_shell: |
         Set-ExecutionPolicy Bypass -Scope Process -Force
-        . "{{ temp_path }}\\{{script_name}}"
+        . "{{ temp_path }}{{script_name}}"
       become: true
       become_user: Administrator
