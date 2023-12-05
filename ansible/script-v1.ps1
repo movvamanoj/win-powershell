@@ -1,5 +1,11 @@
 $diskNumbers = (Get-Disk).Number
 
+$previouslyInitializedDisks = Get-RegistryValue -Name "InitializedDisks" -Hive LocalMachine -Key Registry -ErrorAction SilentlyContinue
+
+if ($previouslyInitializedDisks -eq $null) {
+  $previouslyInitializedDisks = @()
+}
+
 function Get-NextAvailableDriveLetter {
   $usedDriveLetters = Get-Volume | Select-Object -ExpandProperty DriveLetter
   $availableDriveLetters = 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'
@@ -22,6 +28,11 @@ foreach ($diskNumber in $diskNumbers) {
 
   $disk = Get-Disk -Number $diskNumber
 
+  if ($previouslyInitializedDisks.Contains($diskNumber)) {
+    Write-Host "Skipping initialization for Disk $diskNumber (Already initialized)."
+    continue
+  }
+
   if ($disk.IsOffline -or ($disk.PartitionStyle -eq 'RAW') -or (Test-DriveLetterInUse -DriveLetter $disk | Where-Object { $_.DriveLetter })) {
     Write-Host "Skipping initialization for Disk $diskNumber (Already initialized or has a drive letter)."
     continue
@@ -29,6 +40,9 @@ foreach ($diskNumber in $diskNumbers) {
 
   Initialize-Disk -Number $diskNumber -PartitionStyle GPT
   Write-Host "Disk $diskNumber initialized."
+
+  $previouslyInitializedDisks += $diskNumber
+  Set-RegistryValue -Name "InitializedDisks" -Value $previouslyInitializedDisks -Hive LocalMachine -Key Registry -Type REG_SZ
 }
 
 $assignedDriveLetters = @()
@@ -56,6 +70,8 @@ foreach ($diskNumber in $diskNumbers) {
   }
 }
 
+$volumeIndex = 0
+
 for ($i = 0; $i -lt $assignedDriveLetters.Count; $i++) {
   $driveLetter = $assignedDriveLetters[$i]
 
@@ -64,6 +80,8 @@ for ($i = 0; $i -lt $assignedDriveLetters.Count; $i++) {
     continue
   }
 
-  Format-Volume -DriveLetter $driveLetter -FileSystem NTFS -NewFileSystemLabel "SC1CALLS $i" -AllocationUnitSize 65536 -Confirm:$false
-  Write-Host "Formatted volume with drive letter $driveLetter and label SC1CALLS $i."
+  Format-Volume -DriveLetter $driveLetter -FileSystem NTFS -NewFileSystemLabel "SC1CALLS $volumeIndex" -AllocationUnitSize 65536 -Confirm:$false
+  Write-Host "Formatted volume with drive letter $driveLetter and label SC1CALLS $volumeIndex."
+
+  $volumeIndex++
 }
