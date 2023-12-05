@@ -27,12 +27,12 @@ foreach ($disk in $unallocatedDisks) {
 
     # Check if the volume has a drive letter and is formatted
     if ($volume.DriveLetter -ne $null -and $volume.FileSystem -eq 'NTFS') {
-        Write-Host "Volume on Disk $diskNumber is already formatted. Skipping formatting."
+        Write-Host "Volume on Disk $diskNumber with Drive Letter $($volume.DriveLetter) is already formatted. Skipping formatting."
     }
     else {
         # Format the volume with NTFS file system and set the label to "SC1CALL"
         Format-Volume -DriveLetter $volume.DriveLetter -FileSystem NTFS -NewFileSystemLabel "SC1CALL" -AllocationUnitSize 65536 -ErrorAction Stop
-        Write-Host "Volume on Disk $diskNumber formatted and labeled."
+        Write-Host "Volume on Disk $diskNumber with Drive Letter $($volume.DriveLetter) formatted and labeled."
     }
 }
 
