@@ -1,10 +1,10 @@
-# Dynamically retrieve all disk numbers
+# Specify the disk numbers
 $diskNumbers = Get-Disk | Where-Object { $_.IsOffline -eq $false } | Select-Object -ExpandProperty Number
 
 # Function to get the next available drive letter
 function Get-NextAvailableDriveLetter {
     $usedDriveLetters = Get-Volume | Select-Object -ExpandProperty DriveLetter
-    $alphabet = [char[]]('D'..'Z')
+    $alphabet = [char[]]([int][char]'D'..[int][char]'Z')
    
     foreach ($letter in $alphabet) {
         if ($usedDriveLetters -notcontains $letter) {
@@ -43,12 +43,21 @@ foreach ($diskNumber in $diskNumbers) {
         Write-Host "Drive letter $nextAvailableDriveLetter is already in use for Disk $diskNumber. Skipping partition creation."
     }
     else {
-        New-Partition -DiskNumber $diskNumber -UseMaximumSize -DriveLetter $nextAvailableDriveLetter
-        Write-Host "Partition on Disk $diskNumber created with drive letter $nextAvailableDriveLetter."
+        $volumeName = "SC1CALL$diskNumber"  # Customize the volume name here
+        New-Partition -DiskNumber $diskNumber -UseMaximumSize -AssignDriveLetter -DriveLetter $nextAvailableDriveLetter
+        Write-Host "Partition on Disk $diskNumber created with drive letter $nextAvailableDriveLetter and custom name '$volumeName'."
     }
 }
 
-# Format the volumes with the NTFS file system
-for ($i = 0; $i -lt $diskNumbers.Count; $i++) {
-    Format-Volume -DriveLetter $nextAvailableDriveLetters[$i] -FileSystem NTFS -NewFileSystemLabel "SC1CALLS $i" -AllocationUnitSize 65536 -ErrorAction Stop
+# Format the volumes with the NTFS file system, but only if they are not already formatted
+foreach ($volume in Get-Volume -DriveLetter $nextAvailableDriveLetters -ErrorAction SilentlyContinue) {
+    if ($volume.FileSystem -ne 'NTFS') {
+        Format-Volume -DriveLetter $volume.DriveLetter -FileSystem NTFS -NewFileSystemLabel $volumeName -AllocationUnitSize 65536 -ErrorAction Stop
+        Write-Host "Volume $($volume.DriveLetter) formatted with custom name '$volumeName'."
+    }
+    else {
+        Write-Host "Volume $($volume.DriveLetter) is already formatted with NTFS. Skipping formatting."
+    }
 }
+
+Write-Host "Script execution completed."
