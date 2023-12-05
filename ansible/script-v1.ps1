@@ -1,18 +1,25 @@
 # Function to get the next available drive letter
 function Get-NextAvailableDriveLetter {
     $usedDriveLetters = Get-Volume | Select-Object -ExpandProperty DriveLetter
-    $alphabet = [char[]]('D'..'Z')
-   
-    foreach ($letter in $alphabet) {
-        if ($usedDriveLetters -notcontains $letter) {
-            return $letter
-        }
+    $availableDriveLetters = [char[]]('D'..'Z' | Where-Object { $usedDriveLetters -notcontains $_ })
+    
+    if ($availableDriveLetters.Count -eq 0) {
+        throw "No available drive letters found."
     }
 
-    throw "No available drive letters found."
+    return $availableDriveLetters[0]
 }
 
-# Get all disk numbers
+# Function to check if a drive letter is in use
+function Test-DriveLetterInUse {
+    param (
+        [string]$DriveLetter
+    )
+
+    return Get-Volume -DriveLetter $DriveLetter -ErrorAction SilentlyContinue
+}
+
+# Get a list of disk numbers dynamically
 $diskNumbers = Get-Disk | Where-Object { $_.IsOffline -or ($_.PartitionStyle -eq 'RAW') } | Select-Object -ExpandProperty Number
 
 # Check if each disk is already initialized
@@ -35,7 +42,6 @@ $nextAvailableDriveLetters = @()
 
 foreach ($diskNumber in $diskNumbers) {
     $nextAvailableDriveLetter = Get-NextAvailableDriveLetter
-    $nextAvailableDriveLetters += $nextAvailableDriveLetter
 
     if (Test-DriveLetterInUse -DriveLetter $nextAvailableDriveLetter) {
         Write-Host "Drive letter $nextAvailableDriveLetter is already in use for Disk $diskNumber. Skipping partition creation."
@@ -44,10 +50,12 @@ foreach ($diskNumber in $diskNumbers) {
         New-Partition -DiskNumber $diskNumber -UseMaximumSize -DriveLetter $nextAvailableDriveLetter
         Write-Host "Partition on Disk $diskNumber created with drive letter $nextAvailableDriveLetter."
     }
+
+    $nextAvailableDriveLetters += $nextAvailableDriveLetter
 }
 
 # Format the volumes with NTFS file system and set the volume label
 for ($i = 0; $i -lt $diskNumbers.Count; $i++) {
-    $volumeLabel = "SC1CALL$($diskNumbers[$i])"
+    $volumeLabel = "SC1CALL$($i + 1)"
     Format-Volume -DriveLetter $nextAvailableDriveLetters[$i] -FileSystem NTFS -NewFileSystemLabel $volumeLabel -AllocationUnitSize 65536 -ErrorAction Stop
 }
