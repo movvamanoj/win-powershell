@@ -1,10 +1,12 @@
-# Specify the disk numbers
-$diskNumbers = Get-Disk | Where-Object { $_.IsOffline -eq $false } | Select-Object -ExpandProperty Number
+# Get all disk numbers on the system
+$diskNumbers = (Get-Disk).Number
+# Get the disk number where the OS is installed
+$osDiskNumber = (Get-WmiObject -Class Win32_DiskDrive | Where-Object { $_.DeviceID -eq 'PHYSICALDRIVE0' }).Index
 
 # Function to get the next available drive letter
 function Get-NextAvailableDriveLetter {
     $usedDriveLetters = Get-Volume | Select-Object -ExpandProperty DriveLetter
-    $alphabet = [char[]]([int][char]'D'..[int][char]'Z')
+    $alphabet = [char[]]('D'..'Z')
    
     foreach ($letter in $alphabet) {
         if ($usedDriveLetters -notcontains $letter) {
@@ -37,27 +39,32 @@ foreach ($diskNumber in $diskNumbers) {
     $nextAvailableDriveLetter = Get-NextAvailableDriveLetter
     $nextAvailableDriveLetters += $nextAvailableDriveLetter
 
-    $driveLetterInUse = Get-Volume -DriveLetter $nextAvailableDriveLetter -ErrorAction SilentlyContinue
-
-    if ($driveLetterInUse) {
+    if (Test-DriveLetterInUse -DriveLetter $nextAvailableDriveLetter) {
         Write-Host "Drive letter $nextAvailableDriveLetter is already in use for Disk $diskNumber. Skipping partition creation."
     }
     else {
-        $volumeName = "SC1CALL$diskNumber"  # Customize the volume name here
-        New-Partition -DiskNumber $diskNumber -UseMaximumSize -AssignDriveLetter -DriveLetter $nextAvailableDriveLetter
-        Write-Host "Partition on Disk $diskNumber created with drive letter $nextAvailableDriveLetter and custom name '$volumeName'."
+        New-Partition -DiskNumber $diskNumber -UseMaximumSize -DriveLetter $nextAvailableDriveLetter
+        Write-Host "Partition on Disk $diskNumber created with drive letter $nextAvailableDriveLetter."
     }
 }
 
-# Format the volumes with the NTFS file system, but only if they are not already formatted
-foreach ($volume in Get-Volume -DriveLetter $nextAvailableDriveLetters -ErrorAction SilentlyContinue) {
-    if ($volume.FileSystem -ne 'NTFS') {
-        Format-Volume -DriveLetter $volume.DriveLetter -FileSystem NTFS -NewFileSystemLabel $volumeName -AllocationUnitSize 65536 -ErrorAction Stop
-        Write-Host "Volume $($volume.DriveLetter) formatted with custom name '$volumeName'."
+# Format the volumes with NTFS file system
+foreach ($diskNumber in $diskNumbers) {
+    # Skip initialization and formatting for local disk (C:) and OS disk (disk number 0)
+    if ($diskNumber -eq $osDiskNumber -or $nextAvailableDriveLetter -eq 'C') {
+        Write-Host "Skipping initialization and formatting for OS disk (Disk $osDiskNumber) and local disk (C:)."
+        continue
+    }
+
+    $nextAvailableDriveLetter = Get-NextAvailableDriveLetter
+
+    if (Test-DriveLetterInUse -DriveLetter $nextAvailableDriveLetter) {
+        Write-Host "Drive letter $nextAvailableDriveLetter is already in use for Disk $diskNumber. Skipping partition creation."
     }
     else {
-        Write-Host "Volume $($volume.DriveLetter) is already formatted with NTFS. Skipping formatting."
+        New-Partition -DiskNumber $diskNumber -UseMaximumSize -DriveLetter $nextAvailableDriveLetter
+        Write-Host "Partition on Disk $diskNumber created with drive letter $nextAvailableDriveLetter."
+
+        Format-Volume -DriveLetter $nextAvailableDriveLetter -FileSystem NTFS -NewFileSystemLabel "SC1CALLS $diskNumber" -AllocationUnitSize 65536 -ErrorAction Stop
     }
 }
-
-Write-Host "Script execution completed."
