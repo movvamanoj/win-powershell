@@ -54,4 +54,5 @@ foreach ($diskNumber in $diskNumbers) {
         Format-Volume -DriveLetter $nextAvailableDriveLetter -FileSystem NTFS -NewFileSystemLabel $volumeLabel -AllocationUnitSize 65536 -ErrorAction Stop
         Write-Host "Partition on Disk $diskNumber created with drive letter $nextAvailableDriveLetter and label $volumeLabel."
     }
+
 }

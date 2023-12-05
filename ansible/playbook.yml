@@ -20,7 +20,7 @@
       args:
         executable: powershell.exe
       
-    - name: Copy win-dyn-disk-update to temp
+    - name: Copy script_name to temp
       ansible.builtin.win_shell: |
         Copy-Item -Path "{{ temp_folder }}/{{ script_path }}" -Destination "{{ temp_folder }}" -Force
       become: true
