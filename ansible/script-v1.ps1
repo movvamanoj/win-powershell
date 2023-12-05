@@ -23,6 +23,8 @@ foreach ($diskNumber in $diskNumbers) {
     if ($disk.IsOffline) {
         # Bring the disk online
         Set-Disk -Number $diskNumber -IsOffline $false
+        # Wait for a moment to ensure the disk is online
+        Start-Sleep -Seconds 30
         Write-Host "Disk $diskNumber is brought online."
     }
 
@@ -54,5 +56,4 @@ foreach ($diskNumber in $diskNumbers) {
         Format-Volume -DriveLetter $nextAvailableDriveLetter -FileSystem NTFS -NewFileSystemLabel $volumeLabel -AllocationUnitSize 65536 -ErrorAction Stop
         Write-Host "Partition on Disk $diskNumber created with drive letter $nextAvailableDriveLetter and label $volumeLabel."
     }
-
 }
