@@ -7,7 +7,7 @@ $allocatedDisks = Get-Disk | Where-Object { $_.IsOffline -eq $false -and $_.Part
 }
 
 if ($allocatedDisks.Count -gt 0) {
-    Write-Host "Skipping the process as the following disks already have allocated drive letters: $($allocatedDisks -join ', ')"
+    Write-Host "Skipping the process for the following disks as they already have allocated drive letters: $($allocatedDisks -join ', ')"
 }
 else {
     # Step 1: Initialization - Get a list of disks with attached volumes and initialize them if needed
@@ -16,17 +16,24 @@ else {
     foreach ($disk in $attachedDisks) {
         $diskNumber = $disk.Number
 
-        # Check if the disk is not online or not initialized
-        if ($disk.IsOffline -or ($disk.PartitionStyle -eq 'RAW')) {
-            # Initialize the disk with GPT partition style
-            Initialize-Disk -Number $diskNumber -PartitionStyle GPT
-            Write-Host "Disk $diskNumber initialized."
+        # Check if the disk already has a drive letter allocated
+        $volume = Get-Partition -DiskNumber $diskNumber | Get-Volume
+        if ($volume.DriveLetter -ne $null) {
+            Write-Host "Skipping Disk $diskNumber as it already has an allocated drive letter: $($volume.DriveLetter)"
         }
         else {
-            Write-Host "Disk $diskNumber is already initialized. Skipping initialization."
+            # Check if the disk is not online or not initialized
+            if ($disk.IsOffline -or ($disk.PartitionStyle -eq 'RAW')) {
+                # Initialize the disk with GPT partition style
+                Initialize-Disk -Number $diskNumber -PartitionStyle GPT
+                Write-Host "Disk $diskNumber initialized."
+            }
+            else {
+                Write-Host "Disk $diskNumber is already initialized. Skipping initialization."
+            }
         }
     }
-    
+
 # Step 2: Formatting - Format the volumes with NTFS file system for disks that are initialized
 foreach ($disk in $attachedDisks) {
     $diskNumber = $disk.Number
