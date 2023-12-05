@@ -15,14 +15,14 @@ function Get-NextAvailableDriveLetter {
     throw "No available drive letters found."
 }
 
-# Function to test if a drive letter is in use
-function Test-DriveLetterInUse {
+# Function to check if a drive letter is assigned to a disk
+function Test-DriveLetterAssigned {
     param (
-        [string]$DriveLetter
+        [int]$DiskNumber
     )
 
-    $usedDriveLetters = Get-Volume | Select-Object -ExpandProperty DriveLetter
-    return $usedDriveLetters -contains $DriveLetter
+    $assignedDriveLetter = Get-Partition -DiskNumber $DiskNumber | Where-Object { $_.DriveLetter } | Select-Object -ExpandProperty DriveLetter
+    return [bool]($assignedDriveLetter -ne $null)
 }
 
 # Check if each disk is already initialized and has a drive letter
@@ -36,7 +36,7 @@ foreach ($diskNumber in $diskNumbers) {
     $disk = Get-Disk -Number $diskNumber
 
     # Skip if the disk is already initialized or has a drive letter
-    if ($disk.IsOffline -or ($disk.PartitionStyle -eq 'RAW') -or (Test-DriveLetterInUse -DriveLetter $disk | Where-Object { $_.DriveLetter })) {
+    if ($disk.IsOffline -or ($disk.PartitionStyle -eq 'RAW') -or (Test-DriveLetterAssigned -DiskNumber $diskNumber)) {
         Write-Host "Skipping initialization for Disk $diskNumber (Already initialized or has a drive letter)."
         continue
     }
@@ -46,23 +46,6 @@ foreach ($diskNumber in $diskNumbers) {
     Write-Host "Disk $diskNumber initialized."
 }
 
-# Create a new partition on each disk
-foreach ($diskNumber in $diskNumbers) {
-    # Skip Disk 0 (OS disk)
-    if ($diskNumber -eq 0) {
-        Write-Host "Skipping partition creation for Disk 0 (OS disk)."
-        continue
-    }
-
-    # Skip if the disk already has a drive letter
-    if (Test-DriveLetterInUse -DriveLetter ($disk | Get-Partition | Where-Object { $_.DriveLetter })) {
-        Write-Host "Skipping partition creation for Disk $diskNumber (Already has a drive letter)."
-        continue
-    }
-
-    New-Partition -DiskNumber $diskNumber -UseMaximumSize
-    Write-Host "Partition on Disk $diskNumber created."
-}
 # Format the volumes with NTFS file system and specific label
 foreach ($diskNumber in $diskNumbers) {
     # Skip Disk 0 (OS disk)
@@ -71,11 +54,10 @@ foreach ($diskNumber in $diskNumbers) {
         continue
     }
 
-    $partition = Get-Partition -DiskNumber $diskNumber
-
-    # Skip if the partition is not found
-    if ($partition -eq $null) {
-        Write-Host "No partition found on Disk $diskNumber. Skipping formatting."
+    # Skip if a drive letter is already assigned
+    if (Test-DriveLetterAssigned -DiskNumber $diskNumber) {
+        $assignedDriveLetter = Get-Partition -DiskNumber $diskNumber | Where-Object { $_.DriveLetter } | Select-Object -ExpandProperty DriveLetter
+        Write-Host "Drive letter $assignedDriveLetter is already assigned to Disk $diskNumber. Skipping formatting."
         continue
     }
 
