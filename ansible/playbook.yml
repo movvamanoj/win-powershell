@@ -22,7 +22,7 @@
       
     - name: Copy script_name to temp
       ansible.builtin.win_shell: |
-        Copy-Item -Path "{{ temp_folder }}{{ script_path }}" -Destination "{{ temp_folder }}" -Force
+        Copy-Item -Path "{{ temp_folder }}{{ script_path }}" -Destination "{{ temp_path }}" -Force
       become: true
       become_user: Administrator
       args:
@@ -31,6 +31,6 @@
     - name: Execute PowerShell script
       ansible.builtin.win_shell: |
         Set-ExecutionPolicy Bypass -Scope Process -Force
-        . "{{ temp_folder }}\\{{script_name}}"
+        . "{{ temp_path }}{{script_name}}"
       become: true
       become_user: Administrator
