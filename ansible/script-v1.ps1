@@ -3,7 +3,7 @@ $diskNumbers = Get-Disk | Where-Object { $_.IsOffline -eq $false } | Select-Obje
 
 # Function to get the next available drive letter
 function Get-NextAvailableDriveLetter {
-    $usedDriveLetters = Get-Volume | Where-Object { $_.DriveType -eq 'Fixed' } | Select-Object -ExpandProperty DriveLetter
+    $usedDriveLetters = Get-Partition | Where-Object { $_.DriveType -eq 'Fixed' } | Select-Object -ExpandProperty DriveLetter
     $alphabet = [char[]]('D'..'Z')
    
     foreach ($letter in $alphabet) {
@@ -42,7 +42,7 @@ foreach ($diskNumber in $diskNumbers) {
     }
     else {
         $nextAvailableDriveLetter = Get-NextAvailableDriveLetter
-        New-Partition -DiskNumber $diskNumber -UseMaximumSize -AssignDriveLetter -DriveLetter $nextAvailableDriveLetter
+        New-Partition -DiskNumber $diskNumber -UseMaximumSize -AssignDriveLetter
         $volumeLabel = "SC1CALL$($diskNumber)"
         Format-Volume -DriveLetter $nextAvailableDriveLetter -FileSystem NTFS -NewFileSystemLabel $volumeLabel -AllocationUnitSize 65536 -ErrorAction Stop
         Write-Host "Partition on Disk $diskNumber created with drive letter $nextAvailableDriveLetter and label $volumeLabel."
