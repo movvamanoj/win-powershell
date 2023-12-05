@@ -1,30 +1,8 @@
-# Function to get the next available drive letter
-function Get-NextAvailableDriveLetter {
-    $usedDriveLetters = Get-Volume | Select-Object -ExpandProperty DriveLetter
-    $availableDriveLetters = ('D'..'Z' | Where-Object { $usedDriveLetters -notcontains $_ })
-    
-    if ($availableDriveLetters.Count -eq 0) {
-        throw "No available drive letters found."
-    }
+# Step 1: Initialization - Get a list of disks with attached volumes and initialize them if needed
+$attachedDisks = Get-Disk | Where-Object { $_.IsOffline -eq $false -and $_.PartitionStyle -ne 'RAW' }
 
-    return $availableDriveLetters[0]
-}
-
-# Function to check if a drive letter is in use
-function Test-DriveLetterInUse {
-    param (
-        [string]$DriveLetter
-    )
-
-    return Get-Volume -DriveLetter $DriveLetter -ErrorAction SilentlyContinue
-}
-
-# Get a list of disk numbers dynamically
-$existingDiskNumbers = Get-Disk | Where-Object { $_.IsOffline -or ($_.PartitionStyle -eq 'RAW') } | Select-Object -ExpandProperty Number
-
-# Check if each disk is already initialized
-foreach ($diskNumber in $existingDiskNumbers) {
-    $disk = Get-Disk -Number $diskNumber
+foreach ($disk in $attachedDisks) {
+    $diskNumber = $disk.Number
 
     # Check if the disk is not online or not initialized
     if ($disk.IsOffline -or ($disk.PartitionStyle -eq 'RAW')) {
@@ -37,36 +15,31 @@ foreach ($diskNumber in $existingDiskNumbers) {
     }
 }
 
-# Get a list of all disk numbers, including newly attached disks
-$newlyAttachedDiskNumbers = Get-Disk | Where-Object { $existingDiskNumbers -notcontains $_.Number } | Select-Object -ExpandProperty Number
+# Step 2: Formatting - Format the volumes with NTFS file system
+foreach ($disk in $attachedDisks) {
+    $diskNumber = $disk.Number
+    $volume = Get-Partition -DiskNumber $diskNumber | Get-Volume
 
-# Initialize and create partitions for newly attached disks
-foreach ($diskNumber in $newlyAttachedDiskNumbers) {
-    $disk = Get-Disk -Number $diskNumber
-
-    # Check if the disk is not online or not initialized
-    if ($disk.IsOffline -or ($disk.PartitionStyle -eq 'RAW')) {
-        # Initialize the disk with GPT partition style
-        Initialize-Disk -Number $diskNumber -PartitionStyle GPT
-        Write-Host "Newly attached disk $diskNumber initialized."
-    }
-    else {
-        Write-Host "Newly attached disk $diskNumber is already initialized. Skipping initialization."
-    }
-
-    $nextAvailableDriveLetter = Get-NextAvailableDriveLetter
-
-    if (Test-DriveLetterInUse -DriveLetter $nextAvailableDriveLetter) {
-        Write-Host "Drive letter $nextAvailableDriveLetter is already in use for Disk $diskNumber. Skipping partition creation."
-    }
-    else {
-        New-Partition -DiskNumber $diskNumber -UseMaximumSize -AssignDriveLetter -DriveLetter $nextAvailableDriveLetter
-        Write-Host "Partition on Disk $diskNumber created with drive letter $nextAvailableDriveLetter."
-    }
+    # Format the volume with NTFS file system
+    Format-Volume -DriveLetter $volume.DriveLetter -FileSystem NTFS -NewFileSystemLabel "SC1CALL" -AllocationUnitSize 65536 -ErrorAction Stop
+    Write-Host "Volume on Disk $diskNumber formatted and labeled."
 }
 
-# Format the volumes with NTFS file system and set the volume label
-for ($i = 0; $i -lt $existingDiskNumbers.Count; $i++) {
-    $volumeLabel = "SC1CALL$($i + 1)"
-    Format-Volume -DriveLetter $nextAvailableDriveLetters[$i] -FileSystem NTFS -NewFileSystemLabel $volumeLabel -AllocationUnitSize 65536 -ErrorAction Stop
+# Step 3: Drive Letter Allocation - Allocate drive letters dynamically
+$nextAvailableDriveLetters = @()
+
+foreach ($disk in $attachedDisks) {
+    $diskNumber = $disk.Number
+    $nextAvailableDriveLetter = Get-NextAvailableDriveLetter
+    $nextAvailableDriveLetters += $nextAvailableDriveLetter
+
+    if (Test-DriveLetterInUse -DriveLetter $nextAvailableDriveLetter) {
+        Write-Host "Drive letter $nextAvailableDriveLetter is already in use for Disk $diskNumber. Skipping allocation."
+    }
+    else {
+        # Assign the drive letter to the volume
+        $volume = Get-Partition -DiskNumber $diskNumber | Get-Volume
+        $volume | Set-Volume -NewDriveLetter $nextAvailableDriveLetter
+        Write-Host "Drive letter $nextAvailableDriveLetter allocated for Disk $diskNumber."
+    }
 }
