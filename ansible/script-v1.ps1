@@ -64,6 +64,8 @@ foreach ($diskNumber in $diskNumbers) {
     Write-Host "Disk $diskNumber initialized."
 }
 
+# ...
+
 # Create a new partition on each disk with specific drive letters
 $nextAvailableDriveLetters = @()
 
