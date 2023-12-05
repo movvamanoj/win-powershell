@@ -63,12 +63,19 @@ foreach ($diskNumber in $diskNumbers) {
     New-Partition -DiskNumber $diskNumber -UseMaximumSize
     Write-Host "Partition on Disk $diskNumber created."
 }
-
 # Format the volumes with NTFS file system and specific label
 foreach ($diskNumber in $diskNumbers) {
     # Skip Disk 0 (OS disk)
     if ($diskNumber -eq 0) {
         Write-Host "Skipping formatting for Disk 0 (OS disk)."
+        continue
+    }
+
+    $partition = Get-Partition -DiskNumber $diskNumber
+
+    # Skip if the partition is not found
+    if ($partition -eq $null) {
+        Write-Host "No partition found on Disk $diskNumber. Skipping formatting."
         continue
     }
 
