@@ -25,31 +25,30 @@ function Test-DriveLetterInUse {
     return $usedDriveLetters -contains $DriveLetter
 }
 
-# Create a new partition on each disk with specific drive letters and format volumes
+# Loop through each disk
 foreach ($diskNumber in $diskNumbers) {
     # Skip Disk 0 (OS disk)
     if ($diskNumber -eq 0) {
-        Write-Host "Skipping partition creation for Disk 0 (OS disk)."
+        Write-Host "Skipping initialization and partition creation for Disk 0 (OS disk)."
         continue
     }
+
+    $disk = Get-Disk -Number $diskNumber
 
     # Skip if the disk already has a drive letter
     if (Test-DriveLetterInUse -DriveLetter ($disk | Get-Partition | Where-Object { $_.DriveLetter })) {
-        Write-Host "Skipping partition creation for Disk $diskNumber (Already has a drive letter)."
+        Write-Host "Skipping initialization and partition creation for Disk $diskNumber (Already has a drive letter)."
         continue
     }
 
+    # Get the next available drive letter
     $nextAvailableDriveLetter = Get-NextAvailableDriveLetter
 
-    if (Test-DriveLetterInUse -DriveLetter $nextAvailableDriveLetter) {
-        Write-Host "Drive letter $nextAvailableDriveLetter is already in use. Skipping partition creation for Disk $diskNumber."
-    }
-    else {
-        # Format the volume with NTFS file system and specific label
-        Format-Volume -DriveLetter $nextAvailableDriveLetter -FileSystem NTFS -NewFileSystemLabel "SC1CALLS $diskNumber" -AllocationUnitSize 65536 -Confirm:$false
+    # Format the volume with NTFS file system and specific label
+    Format-Volume -DriveLetter $nextAvailableDriveLetter -FileSystem NTFS -NewFileSystemLabel "SC1CALLS $diskNumber" -AllocationUnitSize 65536 -Confirm:$false
 
-        # Initialize the disk with GPT partition style
-        Initialize-Disk -Number $diskNumber -PartitionStyle GPT
-        Write-Host "Disk $diskNumber initialized and partition on Disk $diskNumber created with drive letter $nextAvailableDriveLetter."
-    }
+    # Initialize the disk with GPT partition style
+    Initialize-Disk -Number $diskNumber -PartitionStyle GPT
+
+    Write-Host "Disk $diskNumber initialized and partition on Disk $diskNumber created with drive letter $nextAvailableDriveLetter."
 }
