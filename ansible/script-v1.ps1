@@ -1,25 +1,13 @@
-# Step 1: Get existing drive letters
-$existingDriveLetters = Get-Volume | Select-Object -ExpandProperty DriveLetter
-
-# Step 2: Allocate drive letters based on disk numbers
-$allocatedDriveLetters = @{}
-foreach ($diskNumber in $diskNumbers) {
-    if ($diskNumber -eq 0) {
-        # Disk number 0 is typically the OS disk, so assign 'C' to it
-        $allocatedDriveLetters[$diskNumber] = 'C'
-    }
-    else {
-        # For other disks, allocate letters starting from 'D'
-        $allocatedDriveLetters[$diskNumber] = [char]([int]'D' + $diskNumber - 1)
-    }
-}
+# Specify the disk numbers
+$diskNumbers = (Get-Disk).Number
 
 # Function to get the next available drive letter
 function Get-NextAvailableDriveLetter {
+    $usedDriveLetters = Get-Volume | Select-Object -ExpandProperty DriveLetter
     $alphabet = 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'
 
     foreach ($letter in $alphabet) {
-        if ($existingDriveLetters -notcontains $letter) {
+        if ($usedDriveLetters -notcontains $letter) {
             return $letter
         }
     }
@@ -59,37 +47,46 @@ foreach ($diskNumber in $diskNumbers) {
 }
 
 # Create a new partition on each disk with specific drive letters
-$nextAvailableDriveLetters = @()
+$nextAvailableDriveLetterCounter = 1
 
 foreach ($diskNumber in $diskNumbers) {
+    # Skip Disk 0 (OS disk)
     if ($diskNumber -eq 0) {
         Write-Host "Skipping partition creation for Disk 0 (OS disk)."
         continue
     }
 
-    $allocatedDriveLetter = $allocatedDriveLetters[$diskNumber]
+    $disk = Get-Disk -Number $diskNumber
 
-    if (Test-DriveLetterInUse -DriveLetter $allocatedDriveLetter) {
-        Write-Host "Drive letter $allocatedDriveLetter is already in use for Disk $diskNumber. Skipping partition creation."
+    # Skip if the disk already has a drive letter
+    $existingDriveLetters = $disk | Get-Partition | Where-Object { $_.DriveLetter } | Select-Object -ExpandProperty DriveLetter
+    if ($existingDriveLetters.Count -gt 0) {
+        Write-Host "Skipping partition creation for Disk $diskNumber (Already has drive letters: $($existingDriveLetters -join ', '))."
+        continue
+    }
+
+    $nextAvailableDriveLetter = Get-NextAvailableDriveLetter
+
+    if (Test-DriveLetterInUse -DriveLetter $nextAvailableDriveLetter) {
+        Write-Host "Drive letter $nextAvailableDriveLetter is already in use for Disk $diskNumber. Skipping partition creation."
     }
     else {
-        New-Partition -DiskNumber $diskNumber -UseMaximumSize -DriveLetter $allocatedDriveLetter
-        Write-Host "Partition on Disk $diskNumber created with drive letter $allocatedDriveLetter."
-        $nextAvailableDriveLetters += $allocatedDriveLetter
+        New-Partition -DiskNumber $diskNumber -UseMaximumSize -DriveLetter $nextAvailableDriveLetter
+        Write-Host "Partition on Disk $diskNumber created with drive letter $nextAvailableDriveLetter."
+        $nextAvailableDriveLetterCounter++
     }
 }
 
 # Format the volumes with NTFS file system and specific label
-for ($i = 0; $i -lt $nextAvailableDriveLetters.Count; $i++) {
-    $driveLetter = $nextAvailableDriveLetters[$i]
-
+foreach ($diskNumber in $diskNumbers) {
     # Skip Disk 0 (OS disk)
-    if ($i -eq 0) {
+    if ($diskNumber -eq 0) {
         Write-Host "Skipping formatting for Disk 0 (OS disk)."
         continue
     }
 
-    Format-Volume -DriveLetter $driveLetter -FileSystem NTFS -NewFileSystemLabel "SC1CALLS $i" -AllocationUnitSize 65536 -Confirm:$false
-    Write-Host "Formatted volume with drive letter $driveLetter and label SC1CALLS $i."
-}
+    $driveLetter = Get-Volume -FileSystemLabel "SC1CALLS $($diskNumber - 1)" | Select-Object -ExpandProperty DriveLetter
 
+    Format-Volume -DriveLetter $driveLetter -FileSystem NTFS -NewFileSystemLabel "SC1CALLS $diskNumber" -AllocationUnitSize 65536 -Confirm:$false
+    Write-Host "Formatted volume with drive letter $driveLetter and label SC1CALLS $diskNumber."
+}
