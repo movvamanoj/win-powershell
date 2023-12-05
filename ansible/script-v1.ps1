@@ -25,25 +25,43 @@ function Test-DriveLetterInUse {
     return $usedDriveLetters -contains $DriveLetter
 }
 
-# Check if each disk is already initialized
+# Check if each disk is already initialized and has a drive letter
 foreach ($diskNumber in $diskNumbers) {
+    # Skip Disk 0 (OS disk)
+    if ($diskNumber -eq 0) {
+        Write-Host "Skipping initialization for Disk 0 (OS disk)."
+        continue
+    }
+
     $disk = Get-Disk -Number $diskNumber
 
-    # Check if the disk is not online or not initialized
-    if ($disk.IsOffline -or ($disk.PartitionStyle -eq 'RAW')) {
-        # Initialize the disk with GPT partition style
-        Initialize-Disk -Number $diskNumber -PartitionStyle GPT
-        Write-Host "Disk $diskNumber initialized."
+    # Skip if the disk is already initialized or has a drive letter
+    if ($disk.IsOffline -or ($disk.PartitionStyle -eq 'RAW') -or (Test-DriveLetterInUse -DriveLetter $disk | Where-Object { $_.DriveLetter })) {
+        Write-Host "Skipping initialization for Disk $diskNumber (Already initialized or has a drive letter)."
+        continue
     }
-    else {
-        Write-Host "Disk $diskNumber is already initialized. Skipping initialization."
-    }
+
+    # Initialize the disk with GPT partition style
+    Initialize-Disk -Number $diskNumber -PartitionStyle GPT
+    Write-Host "Disk $diskNumber initialized."
 }
 
 # Create a new partition on each disk with specific drive letters
 $nextAvailableDriveLetters = @()
 
 foreach ($diskNumber in $diskNumbers) {
+    # Skip Disk 0 (OS disk)
+    if ($diskNumber -eq 0) {
+        Write-Host "Skipping partition creation for Disk 0 (OS disk)."
+        continue
+    }
+
+    # Skip if the disk already has a drive letter
+    if (Test-DriveLetterInUse -DriveLetter ($disk | Get-Partition | Where-Object { $_.DriveLetter })) {
+        Write-Host "Skipping partition creation for Disk $diskNumber (Already has a drive letter)."
+        continue
+    }
+
     $nextAvailableDriveLetter = Get-NextAvailableDriveLetter
 
     if (Test-DriveLetterInUse -DriveLetter $nextAvailableDriveLetter) {
@@ -52,10 +70,20 @@ foreach ($diskNumber in $diskNumbers) {
     else {
         New-Partition -DiskNumber $diskNumber -UseMaximumSize -DriveLetter $nextAvailableDriveLetter
         Write-Host "Partition on Disk $diskNumber created with drive letter $nextAvailableDriveLetter."
+        $nextAvailableDriveLetters += $nextAvailableDriveLetter
     }
 }
 
-# Format the volumes with NTFS file system
-for ($i = 0; $i -lt $diskNumbers.Count; $i++) {
-    Format-Volume -DriveLetter $nextAvailableDriveLetters[$i] -FileSystem NTFS -NewFileSystemLabel "SC1CALLS $i" -AllocationUnitSize 65536 -ErrorAction Stop
+# Format the volumes with NTFS file system and specific label
+for ($i = 0; $i -lt $nextAvailableDriveLetters.Count; $i++) {
+    $driveLetter = $nextAvailableDriveLetters[$i]
+
+    # Skip Disk 0 (OS disk)
+    if ($i -eq 0) {
+        Write-Host "Skipping formatting for Disk 0 (OS disk)."
+        continue
+    }
+
+    Format-Volume -DriveLetter $driveLetter -FileSystem NTFS -NewFileSystemLabel "SC1CALLS $i" -AllocationUnitSize 65536 -Confirm:$false
+    Write-Host "Formatted volume with drive letter $driveLetter and label SC1CALLS $i."
 }
