@@ -15,21 +15,6 @@ function Get-NextAvailableDriveLetter {
     throw "No available drive letters found."
 }
 
-# Function to test if a drive letter is in use
-function Test-DriveLetterInUse {
-    param (
-        [string]$DriveLetter
-    )
-
-    $usedDriveLetters = Get-Volume | Select-Object -ExpandProperty DriveLetter
-    return $usedDriveLetters -contains $DriveLetter
-}
-
-# Function to introduce a 1-minute break
-function Start-Sleep-OneMinute {
-    Start-Sleep -Seconds 60
-}
-
 # Check if each disk is already initialized and has a drive letter
 foreach ($diskNumber in $diskNumbers) {
     # Skip Disk 0 (OS disk)
@@ -49,9 +34,6 @@ foreach ($diskNumber in $diskNumbers) {
     # Initialize the disk with GPT partition style
     Initialize-Disk -Number $diskNumber -PartitionStyle GPT
     Write-Host "Disk $diskNumber initialized."
-
-    # Introduce a 1-minute break before proceeding to the next disk
-    Start-Sleep-OneMinute
 }
 
 # Create a new partition on each disk with specific drive letters
@@ -64,27 +46,11 @@ foreach ($diskNumber in $diskNumbers) {
 
     $nextAvailableDriveLetter = Get-NextAvailableDriveLetter
 
-    if (Test-DriveLetterInUse -DriveLetter $nextAvailableDriveLetter) {
-        Write-Host "Drive letter $nextAvailableDriveLetter is already in use for Disk $diskNumber. Skipping partition creation."
+    if ($nextAvailableDriveLetter -eq $null) {
+        Write-Host "No available drive letters. Skipping partition creation for Disk $diskNumber."
     }
     else {
-        $partition = New-Partition -DiskNumber $diskNumber -UseMaximumSize -DriveLetter $nextAvailableDriveLetter
-        Write-Host "Partition on Disk $diskNumber created with drive letter $($partition.DriveLetter)."
+        New-Partition -DiskNumber $diskNumber -UseMaximumSize | Format-Volume -FileSystem NTFS -NewFileSystemLabel "SC1CALLS" -AllocationUnitSize 65536 -DriveLetter $nextAvailableDriveLetter -Confirm:$false
+        Write-Host "Partition on Disk $diskNumber created with drive letter $nextAvailableDriveLetter."
     }
-}
-
-# Format the volumes with NTFS file system and specific label
-for ($i = 0; $i -lt $diskNumbers.Count; $i++) {
-    $diskNumber = $diskNumbers[$i]
-
-    # Skip Disk 0 (OS disk)
-    if ($diskNumber -eq 0) {
-        Write-Host "Skipping formatting for Disk 0 (OS disk)."
-        continue
-    }
-
-    $driveLetter = (Get-Partition -DiskNumber $diskNumber | Get-Volume).DriveLetter
-
-    Format-Volume -DriveLetter $driveLetter -FileSystem NTFS -NewFileSystemLabel "SC1CALLS $i" -AllocationUnitSize 65536 -Confirm:$false
-    Write-Host "Formatted volume with drive letter $driveLetter and label SC1CALLS $i."
 }
