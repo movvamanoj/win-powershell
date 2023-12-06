@@ -1,57 +1,73 @@
-# Collect disk numbers with allocated drive letters
-$allocatedDisks = Get-Disk | Where-Object {
-    $_.IsOffline -eq $false -and $_.PartitionStyle -ne 'RAW' -and (Get-Partition -DiskNumber $_.Number | Get-Volume).DriveLetter -ne $null
-} | Select-Object -ExpandProperty Number
-
-# Step 1: Initialization - Get a list of unallocated disks with attached volumes and initialize them if needed
-$unallocatedDisks = Get-Disk | Where-Object { $_.IsOffline -eq $false -and $_.PartitionStyle -ne 'RAW' -and $_.Number -notin $allocatedDisks }
-
-foreach ($disk in $unallocatedDisks) {
-    $diskNumber = $disk.Number
-
-    # Check if the disk is not online or not initialized
-    if ($disk.IsOffline -or ($disk.PartitionStyle -eq 'RAW')) {
-        # Initialize the disk with GPT partition style
-        Initialize-Disk -Number $diskNumber -PartitionStyle GPT
-        Write-Host "Disk $diskNumber initialized."
-    }
-    else {
-        Write-Host "Disk $diskNumber is already initialized. Skipping initialization."
+# Step 1: Collect existing disk letters along with disk numbers
+$diskNumbersLetter = Get-Disk | ForEach-Object {
+    [PSCustomObject]@{
+        DiskNumber = $_.Number
+        DriveLetter = (Get-Partition -DiskNumber $_.Number | Get-Volume).DriveLetter
     }
 }
 
-# Step 2: Formatting - Format the volumes with NTFS file system and set the label to "SC1CALL" for unallocated disks
-foreach ($disk in $unallocatedDisks) {
-    $diskNumber = $disk.Number
-    $volume = Get-Partition -DiskNumber $diskNumber | Get-Volume
+# Step 2: Define Function to Get Next Available Drive Letter
+function Get-NextAvailableDriveLetter {
+    $usedDriveLetters = Get-Volume | Select-Object -ExpandProperty DriveLetter
+    $alphabet = 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'
 
-    # Check if the volume has a drive letter and is formatted
-    if ($volume.DriveLetter -ne $null -and $volume.FileSystem -eq 'NTFS') {
-        Write-Host "Volume on Disk $diskNumber with Drive Letter $($volume.DriveLetter) is already formatted. Skipping formatting."
+    foreach ($letter in $alphabet) {
+        if ($usedDriveLetters -notcontains $letter) {
+            return $letter
+        }
+    }
+
+    throw "No available drive letters found."
+}
+
+# Step 3: Define Function to Test if Drive Letter is in Use
+function Test-DriveLetterInUse {
+    param (
+        [string]$DriveLetter
+    )
+
+    $usedDriveLetters = Get-Volume | Select-Object -ExpandProperty DriveLetter
+    return $usedDriveLetters -contains $DriveLetter
+}
+
+# Step 4: Create Partitions on Disks
+foreach ($diskNumber in (Get-Disk).Number) {
+    # Skip Disk 0 (OS disk)
+    if ($diskNumber -eq 0) {
+        Write-Host "Skipping partition creation for Disk 0 (OS disk)."
+        continue
+    }
+
+    $existingDisk = $diskNumbersLetter | Where-Object { $_.DiskNumber -eq $diskNumber }
+
+    # Skip if the disk already has a drive letter
+    if ($existingDisk.DriveLetter -ne $null) {
+        Write-Host "Skipping partition creation for Disk $diskNumber (Already has a drive letter $($existingDisk.DriveLetter))."
+        continue
+    }
+
+    $nextAvailableDriveLetter = Get-NextAvailableDriveLetter
+
+    if (Test-DriveLetterInUse -DriveLetter $nextAvailableDriveLetter) {
+        Write-Host "Drive letter $nextAvailableDriveLetter is already in use for Disk $diskNumber. Skipping partition creation."
     }
     else {
-        # Format the volume with NTFS file system and set the label to "SC1CALL"
-        Format-Volume -DriveLetter $volume.DriveLetter -FileSystem NTFS -NewFileSystemLabel "SC1CALL" -AllocationUnitSize 65536 -ErrorAction Stop
-        Write-Host "Volume on Disk $diskNumber with Drive Letter $($volume.DriveLetter) formatted and labeled."
+        New-Partition -DiskNumber $diskNumber -UseMaximumSize -AssignDriveLetter:$false
+        Write-Host "Partition on Disk $diskNumber created. Drive letter assignment pending."
     }
 }
 
-# Step 3: Drive Letter Allocation - Allocate drive letters dynamically for unallocated disks
-$nextAvailableDriveLetters = @()
+# Step 5: Format Volumes
+foreach ($diskInfo in $diskNumbersLetter) {
+    $diskNumber = $diskInfo.DiskNumber
+    $driveLetter = $diskInfo.DriveLetter
 
-foreach ($disk in $unallocatedDisks) {
-    $diskNumber = $disk.Number
-    $volume = Get-Partition -DiskNumber $diskNumber | Get-Volume
-
-    # Check if the volume has a drive letter
-    if ($volume.DriveLetter -ne $null) {
-        Write-Host "Drive letter $($volume.DriveLetter) is already allocated for Disk $diskNumber. Skipping allocation."
+    # Skip Disk 0 (OS disk)
+    if ($diskNumber -eq 0) {
+        Write-Host "Skipping formatting for Disk 0 (OS disk)."
+        continue
     }
-    else {
-        $nextAvailableDriveLetter = Get-NextAvailableDriveLetter
 
-        # Assign the drive letter to the volume
-        $volume | Set-Volume -NewDriveLetter $nextAvailableDriveLetter
-        Write-Host "Drive letter $nextAvailableDriveLetter allocated for Disk $diskNumber."
-    }
+    Format-Volume -DriveLetter $driveLetter -FileSystem NTFS -NewFileSystemLabel "SC1CALLS $diskNumber" -AllocationUnitSize 65536 -Confirm:$false
+    Write-Host "Formatted volume with drive letter $driveLetter and label SC1CALLS $diskNumber."
 }
