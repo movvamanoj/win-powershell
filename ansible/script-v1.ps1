@@ -76,31 +76,15 @@ foreach ($diskNumber in $diskNumbers) {
 
     # Check if there is unallocated space on the disk
     if ((Get-Partition -DiskNumber $diskNumber | Where-Object { $_.SizeRemaining -gt 0 })) {
-        New-Partition -DiskNumber $diskNumber -UseMaximumSize -DriveLetter $nextAvailableDriveLetter
+        $partition = New-Partition -DiskNumber $diskNumber -UseMaximumSize -DriveLetter $nextAvailableDriveLetter
         Write-Host "Partition on Disk $diskNumber created with drive letter $nextAvailableDriveLetter."
         $diskNumbersLetter[$diskNumber] += $nextAvailableDriveLetter
+
+        # Format the partition
+        Format-Volume -Partition $partition -FileSystem NTFS -NewFileSystemLabel "SC1CALLS $diskNumber" -AllocationUnitSize 65536 -Confirm:$false
+        Write-Host "Formatted volume with drive letter $nextAvailableDriveLetter and label SC1CALLS $diskNumber."
     }
     else {
         Write-Host "Not enough available capacity on Disk $diskNumber. Skipping partition creation."
-    }
-}
-
-# Format the volumes with NTFS file system and specific label
-foreach ($diskNumber in $diskNumbers) {
-    # Skip Disk 0 (OS disk)
-    if ($diskNumber -eq 0) {
-        Write-Host "Skipping formatting for Disk 0 (OS disk)."
-        continue
-    }
-
-    foreach ($driveLetter in $diskNumbersLetter[$diskNumber]) {
-        # Check if the partition exists before formatting
-        if (Get-Partition -DiskNumber $diskNumber | Where-Object { $_.DriveLetter -eq $driveLetter }) {
-            Format-Volume -DriveLetter $driveLetter -FileSystem NTFS -NewFileSystemLabel "SC1CALLS $diskNumber" -AllocationUnitSize 65536 -Confirm:$false
-            Write-Host "Formatted volume with drive letter $driveLetter and label SC1CALLS $diskNumber."
-        }
-        else {
-            Write-Host "Partition with drive letter $driveLetter not found on Disk $diskNumber. Skipping formatting."
-        }
     }
 }
