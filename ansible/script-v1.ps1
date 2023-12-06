@@ -96,8 +96,8 @@ foreach ($diskNumber in $diskNumbers) {
     foreach ($driveLetter in $diskNumbersLetter[$diskNumber]) {
         # Check if the partition exists before formatting
         if (Get-Partition -DiskNumber $diskNumber | Where-Object { $_.DriveLetter -eq $driveLetter }) {
-            Format-Volume -DriveLetter $driveLetter -FileSystem NTFS -NewFileSystemLabel "SC1CALLS $diskNumber" -AllocationUnitSize 65536 -Confirm:$false
-            Write-Host "Formatted volume with drive letter $driveLetter and label SC1CALLS $diskNumber."
+            Format-Volume -DriveLetter $driveLetter -FileSystem NTFS -NewFileSystemLabel "SC1CALLS" -AllocationUnitSize 65536 -Confirm:$false
+            Write-Host "Formatted volume with drive letter $driveLetter and label SC1CALLS."
         }
         else {
             Write-Host "Partition with drive letter $driveLetter not found on Disk $diskNumber. Skipping formatting."
