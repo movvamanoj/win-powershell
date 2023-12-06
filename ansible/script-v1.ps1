@@ -48,7 +48,7 @@ foreach ($diskNumber in $diskNumbers) {
         Write-Host "Disk $diskNumber initialized."
 
         # Add the new drive letter and number to the processed list
-        $diskNumbersLetter += "$diskNumber:$nextAvailableDriveLetter"
+        $diskNumbersLetter += "$($diskNumber):$($nextAvailableDriveLetter)"
     }
 }
 
@@ -72,7 +72,7 @@ foreach ($diskNumber in $diskNumbers) {
         Write-Host "Partition on Disk $diskNumber created with drive letter $nextAvailableDriveLetter."
 
         # Add the new drive letter and number to the processed list
-        $diskNumbersLetter += "$diskNumber:$nextAvailableDriveLetter"
+        $diskNumbersLetter += "$($diskNumber):$($nextAvailableDriveLetter)"
     }
 }
 
