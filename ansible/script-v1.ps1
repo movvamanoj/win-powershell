@@ -8,11 +8,13 @@ $diskNumbersLetter = Get-Disk | Where-Object { $_.IsOffline -eq $false -and $_.P
 
 # Step 2: Function to get the next available drive letter
 function Get-NextAvailableDriveLetter {
-    $usedDriveLetters = Get-Volume | Select-Object -ExpandProperty DriveLetter
+    param (
+        [string[]]$UsedDriveLetters
+    )
     $alphabet = 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'
 
     foreach ($letter in $alphabet) {
-        if ($usedDriveLetters -notcontains $letter) {
+        if ($UsedDriveLetters -notcontains $letter) {
             return $letter
         }
     }
@@ -30,7 +32,7 @@ function Test-DriveLetterInUse {
     return $usedDriveLetters -contains $DriveLetter
 }
 
-# Step 4: Check if disks are initialized and have drive letters
+# Step 4: Initialize and create partitions for each disk
 foreach ($diskInfo in $diskNumbersLetter) {
     $diskNumber = $diskInfo.DiskNumber
     $driveLetter = $diskInfo.DriveLetter
@@ -45,19 +47,23 @@ foreach ($diskInfo in $diskNumbersLetter) {
     Initialize-Disk -Number $diskNumber -PartitionStyle GPT
     Write-Host "Disk $diskNumber initialized."
 
-    # Create a partition on the initialized disk
-    $nextAvailableDriveLetter = Get-NextAvailableDriveLetter
+    # Get the next available drive letter
+    $usedDriveLetters = $diskNumbersLetter | Where-Object { $_.DiskNumber -ne $diskNumber } | Select-Object -ExpandProperty DriveLetter
+    $nextAvailableDriveLetter = Get-NextAvailableDriveLetter -UsedDriveLetters $usedDriveLetters
 
     if (Test-DriveLetterInUse -DriveLetter $nextAvailableDriveLetter) {
         Write-Host "Drive letter $nextAvailableDriveLetter is already in use for Disk $diskNumber. Skipping partition creation."
     }
     else {
+        # Create a new partition on the disk
         New-Partition -DiskNumber $diskNumber -UseMaximumSize -DriveLetter $nextAvailableDriveLetter
         Write-Host "Partition on Disk $diskNumber created with drive letter $nextAvailableDriveLetter."
     }
 }
 
 # Step 5: Format the volumes with NTFS file system and specific label
+$nextAvailableDriveLetters = $diskNumbersLetter | Where-Object { $_.DriveLetter } | Select-Object -ExpandProperty DriveLetter
+
 for ($i = 0; $i -lt $nextAvailableDriveLetters.Count; $i++) {
     $driveLetter = $nextAvailableDriveLetters[$i]
 
