@@ -43,12 +43,12 @@ foreach ($diskInfo in $diskNumbersLetter) {
         continue
     }
 
-    # Get the existing drive letters used by other disks
-    $usedDriveLetters = $diskNumbersLetter | Where-Object { $_.DiskNumber -ne $diskNumber } | Select-Object -ExpandProperty DriveLetter
-
     # Initialize the disk with GPT partition style
     Initialize-Disk -Number $diskNumber -PartitionStyle GPT
     Write-Host "Disk $diskNumber initialized."
+
+    # Get the existing drive letters used by other disks (excluding the current disk)
+    $usedDriveLetters = $diskNumbersLetter | Where-Object { $_.DiskNumber -ne $diskNumber } | Select-Object -ExpandProperty DriveLetter
 
     # Get the next available drive letter
     $nextAvailableDriveLetter = Get-NextAvailableDriveLetter -UsedDriveLetters $usedDriveLetters
@@ -58,23 +58,7 @@ foreach ($diskInfo in $diskNumbersLetter) {
     }
     else {
         # Create a new partition on the disk
-        New-Partition -DiskNumber $diskNumber -UseMaximumSize -DriveLetter $nextAvailableDriveLetter
+        New-Partition -DiskNumber $diskNumber -UseMaximumSize | Format-Volume -FileSystem NTFS -NewFileSystemLabel "SC1CALLS" -DriveLetter $nextAvailableDriveLetter -AllocationUnitSize 65536 -Confirm:$false
         Write-Host "Partition on Disk $diskNumber created with drive letter $nextAvailableDriveLetter."
     }
-}
-
-# Step 5: Format the volumes with NTFS file system and specific label
-$nextAvailableDriveLetters = $diskNumbersLetter | Where-Object { $_.DriveLetter } | Select-Object -ExpandProperty DriveLetter
-
-for ($i = 0; $i -lt $nextAvailableDriveLetters.Count; $i++) {
-    $driveLetter = $nextAvailableDriveLetters[$i]
-
-    # Skip Disk 0 (OS disk)
-    if ($i -eq 0) {
-        Write-Host "Skipping formatting for Disk 0 (OS disk)."
-        continue
-    }
-
-    Format-Volume -DriveLetter $driveLetter -FileSystem NTFS -NewFileSystemLabel "SC1CALLS $i" -AllocationUnitSize 65536 -Confirm:$false
-    Write-Host "Formatted volume with drive letter $driveLetter and label SC1CALLS $i."
 }
