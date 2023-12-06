@@ -43,12 +43,14 @@ foreach ($diskInfo in $diskNumbersLetter) {
         continue
     }
 
+    # Get the existing drive letters used by other disks
+    $usedDriveLetters = $diskNumbersLetter | Where-Object { $_.DiskNumber -ne $diskNumber } | Select-Object -ExpandProperty DriveLetter
+
     # Initialize the disk with GPT partition style
     Initialize-Disk -Number $diskNumber -PartitionStyle GPT
     Write-Host "Disk $diskNumber initialized."
 
     # Get the next available drive letter
-    $usedDriveLetters = $diskNumbersLetter | Where-Object { $_.DiskNumber -ne $diskNumber } | Select-Object -ExpandProperty DriveLetter
     $nextAvailableDriveLetter = Get-NextAvailableDriveLetter -UsedDriveLetters $usedDriveLetters
 
     if (Test-DriveLetterInUse -DriveLetter $nextAvailableDriveLetter) {
