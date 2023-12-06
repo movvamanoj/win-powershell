@@ -44,19 +44,8 @@ foreach ($diskInfo in $diskNumbersLetter) {
     # Initialize the disk with GPT partition style
     Initialize-Disk -Number $diskNumber -PartitionStyle GPT
     Write-Host "Disk $diskNumber initialized."
-}
 
-# Step 5: Create partitions on disks
-foreach ($diskInfo in $diskNumbersLetter) {
-    $diskNumber = $diskInfo.DiskNumber
-    $driveLetter = $diskInfo.DriveLetter
-
-    # Skip if the disk already has a drive letter
-    if ($driveLetter) {
-        Write-Host "Skipping partition creation for Disk $diskNumber (Already has a drive letter)."
-        continue
-    }
-
+    # Create a partition on the initialized disk
     $nextAvailableDriveLetter = Get-NextAvailableDriveLetter
 
     if (Test-DriveLetterInUse -DriveLetter $nextAvailableDriveLetter) {
@@ -68,7 +57,7 @@ foreach ($diskInfo in $diskNumbersLetter) {
     }
 }
 
-# Step 6: Format the volumes with NTFS file system and specific label
+# Step 5: Format the volumes with NTFS file system and specific label
 for ($i = 0; $i -lt $nextAvailableDriveLetters.Count; $i++) {
     $driveLetter = $nextAvailableDriveLetters[$i]
 
