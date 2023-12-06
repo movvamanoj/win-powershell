@@ -1,7 +1,10 @@
-# Step 1: Specify Disk Numbers
-$diskNumbersLetter = @()
+# Specify the disk numbers
+$diskNumbers = (Get-Disk).Number
 
-# Step 2: Define Function to Get Next Available Drive Letter
+# Create a variable to store allocated disk letters along with their disk numbers
+$diskNumbersLetter = @{}
+
+# Function to get the next available drive letter
 function Get-NextAvailableDriveLetter {
     $usedDriveLetters = Get-Volume | Select-Object -ExpandProperty DriveLetter
     $alphabet = 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'
@@ -15,77 +18,75 @@ function Get-NextAvailableDriveLetter {
     throw "No available drive letters found."
 }
 
-# Step 3: Define Function to Test if Drive Letter is in Use
+# Function to test if a drive letter is in use for a specific disk
 function Test-DriveLetterInUse {
     param (
+        [int]$DiskNumber,
         [string]$DriveLetter
     )
 
-    $usedDriveLetters = Get-Volume | Select-Object -ExpandProperty DriveLetter
+    $usedDriveLetters = $diskNumbersLetter[$DiskNumber]
     return $usedDriveLetters -contains $DriveLetter
 }
 
-# Step 4: Check if Disks are Initialized and Have Drive Letters
+# Check if each disk is already initialized and has a drive letter
 foreach ($diskNumber in $diskNumbers) {
-    # Skip if the disk has already been processed
-    if ($diskNumbersLetter -contains $diskNumber) {
-        Write-Host "Skipping partition creation for Disk $diskNumber (Already processed)."
-        continue
-    }
-
-    # Get the next available drive letter
-    $nextAvailableDriveLetter = Get-NextAvailableDriveLetter
-
-    # Initialize the disk with GPT partition style if needed
+    # Skip Disk 0 (OS disk)
     if ($diskNumber -eq 0) {
         Write-Host "Skipping initialization for Disk 0 (OS disk)."
-    }
-    elseif ($disk.IsOffline -or ($disk.PartitionStyle -eq 'RAW') -or (Test-DriveLetterInUse -DriveLetter $disk | Where-Object { $_.DriveLetter })) {
-        Write-Host "Skipping initialization for Disk $diskNumber (Already initialized or has a drive letter)."
-    }
-    else {
-        Initialize-Disk -Number $diskNumber -PartitionStyle GPT
-        Write-Host "Disk $diskNumber initialized."
-
-        # Add the new drive letter and number to the processed list
-        $diskNumbersLetter += "$($diskNumber):$($nextAvailableDriveLetter)"
-    }
-}
-
-# Step 5: Create Partitions on Disks
-foreach ($diskNumber in $diskNumbers) {
-    # Skip if the disk has already been processed
-    if ($diskNumbersLetter -contains $diskNumber) {
-        Write-Host "Skipping partition creation for Disk $diskNumber (Already processed)."
         continue
     }
 
-    # Get the next available drive letter
+    # Skip if the disk is already initialized or has a drive letter
+    if ($diskNumber -in $diskNumbersLetter.Keys) {
+        Write-Host "Skipping initialization for Disk $diskNumber (Already initialized or has a drive letter)."
+        continue
+    }
+
+    # Initialize the disk with GPT partition style
+    Initialize-Disk -Number $diskNumber -PartitionStyle GPT
+    Write-Host "Disk $diskNumber initialized."
+
+    # Add the disk number to the diskNumbersLetter with an empty array for drive letters
+    $diskNumbersLetter[$diskNumber] = @()
+}
+
+# Create a new partition on each disk with specific drive letters
+foreach ($diskNumber in $diskNumbers) {
+    # Skip Disk 0 (OS disk)
+    if ($diskNumber -eq 0) {
+        Write-Host "Skipping partition creation for Disk 0 (OS disk)."
+        continue
+    }
+
+    # Skip if the disk already has a drive letter
+    if ($diskNumber -in $diskNumbersLetter.Keys -and $diskNumbersLetter[$diskNumber]) {
+        Write-Host "Skipping partition creation for Disk $diskNumber (Already has a drive letter)."
+        continue
+    }
+
     $nextAvailableDriveLetter = Get-NextAvailableDriveLetter
 
-    # Check if the next available drive letter is already in use
-    if (Test-DriveLetterInUse -DriveLetter $nextAvailableDriveLetter) {
+    if ($diskNumber -in $diskNumbersLetter.Keys -and $nextAvailableDriveLetter -in $diskNumbersLetter[$diskNumber]) {
         Write-Host "Drive letter $nextAvailableDriveLetter is already in use for Disk $diskNumber. Skipping partition creation."
     }
     else {
         New-Partition -DiskNumber $diskNumber -UseMaximumSize -DriveLetter $nextAvailableDriveLetter
         Write-Host "Partition on Disk $diskNumber created with drive letter $nextAvailableDriveLetter."
-
-        # Add the new drive letter and number to the processed list
-        $diskNumbersLetter += "$($diskNumber):$($nextAvailableDriveLetter)"
+        $diskNumbersLetter[$diskNumber] += $nextAvailableDriveLetter
     }
 }
 
-# Step 6: Format Volumes
-foreach ($diskInfo in $diskNumbersLetter) {
-    $diskNumber, $driveLetter = $diskInfo -split ":"
-
+# Format the volumes with NTFS file system and specific label
+foreach ($diskNumber in $diskNumbers) {
     # Skip Disk 0 (OS disk)
     if ($diskNumber -eq 0) {
         Write-Host "Skipping formatting for Disk 0 (OS disk)."
         continue
     }
 
-    Format-Volume -DriveLetter $driveLetter -FileSystem NTFS -NewFileSystemLabel "SC1CALL$diskNumber" -AllocationUnitSize 65536 -Confirm:$false
-    Write-Host "Formatted volume with drive letter $driveLetter and label SC1CALL$diskNumber."
+    foreach ($driveLetter in $diskNumbersLetter[$diskNumber]) {
+        Format-Volume -DriveLetter $driveLetter -FileSystem NTFS -NewFileSystemLabel "SC1CALLS $diskNumber" -AllocationUnitSize 65536 -Confirm:$false
+        Write-Host "Formatted volume with drive letter $driveLetter and label SC1CALLS $diskNumber."
+    }
 }
