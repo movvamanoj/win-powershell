@@ -30,7 +30,7 @@ function Test-DriveLetterInUse {
     return $usedDriveLetters -contains $DriveLetter
 }
 
-# Step 4: Create Partitions on Disks
+# Step 4: Create Partitions on Disks and Assign Drive Letters
 foreach ($diskNumber in (Get-Disk).Number) {
     # Skip Disk 0 (OS disk)
     if ($diskNumber -eq 0) {
@@ -53,7 +53,23 @@ foreach ($diskNumber in (Get-Disk).Number) {
     }
     else {
         $partition = New-Partition -DiskNumber $diskNumber -UseMaximumSize
-        $volume = Format-Volume -Partition $partition -FileSystem NTFS -NewFileSystemLabel "SC1CALLS $diskNumber" -AllocationUnitSize 65536 -Confirm:$false
-        Write-Host "Formatted volume with drive letter $($volume.DriveLetter) and label SC1CALLS $diskNumber."
+        $driveLetter = $nextAvailableDriveLetter
+        Add-PartitionAccessPath -Partition $partition -AccessPath "$driveLetter\"
+        Write-Host "Partition on Disk $diskNumber created with drive letter $driveLetter."
     }
+}
+
+# Step 5: Format Volumes
+foreach ($diskInfo in $diskNumbersLetter) {
+    $diskNumber = $diskInfo.DiskNumber
+    $driveLetter = $diskInfo.DriveLetter
+
+    # Skip Disk 0 (OS disk)
+    if ($diskNumber -eq 0) {
+        Write-Host "Skipping formatting for Disk 0 (OS disk)."
+        continue
+    }
+
+    Format-Volume -DriveLetter $driveLetter -FileSystem NTFS -NewFileSystemLabel "SC1CALLS $diskNumber" -AllocationUnitSize 65536 -Confirm:$false
+    Write-Host "Formatted volume with drive letter $driveLetter and label SC1CALLS $diskNumber."
 }
