@@ -68,12 +68,9 @@ foreach ($diskNumber in $diskNumbers) {
         Write-Host "Drive letter $nextAvailableDriveLetter is already in use for Disk $diskNumber. Skipping partition creation."
     }
     else {
-        New-Partition -DiskNumber $diskNumber -UseMaximumSize -DriveLetter $nextAvailableDriveLetter
-        Write-Host "Partition on Disk $diskNumber created with drive letter $nextAvailableDriveLetter."
+        $partition = New-Partition -DiskNumber $diskNumber -UseMaximumSize -DriveLetter $nextAvailableDriveLetter
+        Write-Host "Partition on Disk $diskNumber created with drive letter $($partition.DriveLetter)."
     }
-
-    # Introduce a 1-minute break before proceeding to the next disk
-    Start-Sleep-OneMinute
 }
 
 # Format the volumes with NTFS file system and specific label
@@ -90,7 +87,4 @@ for ($i = 0; $i -lt $diskNumbers.Count; $i++) {
 
     Format-Volume -DriveLetter $driveLetter -FileSystem NTFS -NewFileSystemLabel "SC1CALLS $i" -AllocationUnitSize 65536 -Confirm:$false
     Write-Host "Formatted volume with drive letter $driveLetter and label SC1CALLS $i."
-
-    # Introduce a 1-minute break before proceeding to the next disk
-    Start-Sleep-OneMinute
 }
