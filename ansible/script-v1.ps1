@@ -7,7 +7,7 @@ $diskNumbersLetter = @{}
 # Function to get the next available drive letter
 function Get-NextAvailableDriveLetter {
     $usedDriveLetters = Get-Volume | Select-Object -ExpandProperty DriveLetter
-    $alphabet = 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'
+    $alphabet = 'G'
 
     foreach ($letter in $alphabet) {
         if ($usedDriveLetters -notcontains $letter) {
@@ -28,31 +28,6 @@ function Test-DriveLetterInUse {
     $usedDriveLetters = $diskNumbersLetter[$DiskNumber]
     return $usedDriveLetters -contains $DriveLetter
 }
-
-# Check if there are disks with drive letter G and change them to P
-foreach ($diskNumber in $diskNumbers) {
-    # Skip Disk 0 (OS disk)
-    if ($diskNumber -eq 0) {
-        Write-Host "Skipping drive letter check for Disk 0 (OS disk)."
-        continue
-    }
-
-    $currentDriveLetter = $diskNumbersLetter[$diskNumber]
-
-    if ($currentDriveLetter -contains 'G') {
-        Write-Host "Changing drive letter from G to P for Disk $diskNumber."
-        Set-Partition -DriveLetter 'G' -NewDriveLetter 'P' -NoFormatting -Confirm:$false
-        $diskNumbersLetter[$diskNumber] = @('P')
-    }
-}
-
-# Change the drive letter of Disk 2 to G if Disk 1's letter was changed to P
-if ($diskNumbersLetter[1] -contains 'P' -and $diskNumbersLetter[2] -notcontains 'G') {
-    Write-Host "Changing drive letter for Disk 2 from $diskNumbersLetter[2] to G."
-    Set-Partition -DriveLetter $diskNumbersLetter[2] -NewDriveLetter 'G' -NoFormatting -Confirm:$false
-    $diskNumbersLetter[2] = @('G')
-}
-
 
 # Check if each disk is already initialized and has a drive letter
 foreach ($diskNumber in $diskNumbers) {
@@ -80,7 +55,14 @@ foreach ($diskNumber in $diskNumbers) {
     }
 
     # Add the disk number to the diskNumbersLetter with an empty array for drive letters
-    $diskNumbersLetter[$diskNumber] = @()
+    $diskNumbersLetter[$diskNumber] = @(Get-Partition -DiskNumber $diskNumber | Select-Object -ExpandProperty DriveLetter)
+
+    # Check if the disk has drive letter G
+    if ($diskNumbersLetter[$diskNumber] -contains 'G') {
+        Write-Host "Changing drive letter G to P for Disk $diskNumber."
+        Set-Partition -DiskNumber $diskNumber -DriveLetter 'G' -NewDriveLetter 'P' -NoFormatting -Confirm:$false
+        $diskNumbersLetter[$diskNumber] = @(Get-Partition -DiskNumber $diskNumber | Select-Object -ExpandProperty DriveLetter)
+    }
 }
 
 # Create a new partition on each disk with specific drive letters
@@ -110,7 +92,7 @@ foreach ($diskNumber in $diskNumbers) {
     }
 }
 
-# Format the volumes with NTFS file system and specific label
+# Format the volumes with the NTFS file system and specific label
 foreach ($diskNumber in $diskNumbers) {
     # Skip Disk 0 (OS disk)
     if ($diskNumber -eq 0) {
@@ -121,7 +103,7 @@ foreach ($diskNumber in $diskNumbers) {
     foreach ($driveLetter in $diskNumbersLetter[$diskNumber]) {
         # Check if the partition exists before formatting
         if (Get-Partition -DiskNumber $diskNumber | Where-Object { $_.DriveLetter -eq $driveLetter }) {
-            Format-Volume -DriveLetter $driveLetter -FileSystem NTFS -NewFileSystemLabel "SC1CALLS" -AllocationUnitSize 65536 -Confirm:$false
+            Format-Volume -DriveLetter $driveLetter -FileSystem NTFS -NewFileSystemLabel "SC1CALLS" -AllocationUnitSize 65536 -NoFormatting -Confirm:$false
             Write-Host "Formatted volume with drive letter $driveLetter and label SC1CALLS."
         }
         else {
