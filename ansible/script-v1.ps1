@@ -1,3 +1,18 @@
+# Modify the existing drive letter from G to P without formatting or data loss
+foreach ($driveLetter in $diskNumbersLetter[$diskNumber]) {
+        # Check if the drive letter is G
+     if ($driveLetter -eq 'G') {
+         Write-Host "Modifying drive letter for Disk $diskNumber from G to P without formatting..."
+         try {
+             Set-Partition -DriveLetter $driveLetter -NewDriveLetter 'P' -AssignDriveLetter $false -ErrorAction Stop
+             Write-Host "Drive letter for Disk $diskNumber modified from G to P without formatting."
+         } catch {
+             Write-Host "Failed to modify drive letter for Disk $diskNumber. $_"
+            }
+        }
+    }
+}
+
 # Specify the disk numbers
 $diskNumbers = (Get-Disk).Number
 
@@ -7,7 +22,7 @@ $diskNumbersLetter = @{}
 # Function to get the next available drive letter
 function Get-NextAvailableDriveLetter {
     $usedDriveLetters = Get-Volume | Select-Object -ExpandProperty DriveLetter
-    $alphabet = 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'
+    $alphabet = 'G'
 
     foreach ($letter in $alphabet) {
         if ($usedDriveLetters -notcontains $letter) {
