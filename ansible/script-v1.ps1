@@ -7,7 +7,7 @@ $diskNumbersLetter = @{}
 # Function to get the next available drive letter
 function Get-NextAvailableDriveLetter {
     $usedDriveLetters = Get-Volume | Select-Object -ExpandProperty DriveLetter
-    $alphabet = 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'
+    $alphabet = 'G'
 
     foreach ($letter in $alphabet) {
         if ($usedDriveLetters -notcontains $letter) {
