@@ -32,27 +32,22 @@ function Test-DriveLetterInUse {
     return $usedDriveLetters -contains $DriveLetter
 }
 
-# Dynamically find the disk number with the drive letter G
-# Find the disk number with drive letter G
-$diskNumberToChange = ($diskNumbersLetter.GetEnumerator() | Where-Object { $_.Value -contains 'G' }).Key
-
-# Check if Disk 1 has a partition with drive letter G and change it to P
-if ($diskNumberToChange) {
+# Iterate through all disk numbers
+foreach ($diskNumberToChange in $diskNumbers) {
+    # Check if Disk has a partition with drive letter G
     $partitionsOnDisk = Get-Partition -DiskNumber $diskNumberToChange
-    $partitionWithDriveG = $partitionsOnDisk | Where-Object { $_.DriveLetter -eq 'G' -or $_.AccessPaths -contains 'G:\' }
+    $partitionWithDriveG = $partitionsOnDisk | Where-Object { $_.DriveLetter -eq 'G' }
 
     if ($partitionWithDriveG) {
-        # Change drive letter G to P for the partition on the specified disk
+        # Change drive letter G to P for the partition on Disk
         $partitionWithDriveG | Set-Partition -NewDriveLetter $desiredDriveLetter -Confirm:$false
         Write-Host "Drive letter on Disk $diskNumberToChange changed from G to $desiredDriveLetter."
         $diskNumbersLetter[$diskNumberToChange] = $desiredDriveLetter
+        break  # Stop iterating further after the first change
     }
     else {
         Write-Host "Disk $diskNumberToChange does not have drive letter G. Skipping drive letter change."
     }
-}
-else {
-    Write-Host "No disk found with drive letter G. Skipping drive letter change."
 }
 # Continue with other processes (e.g., initialization, partition creation, formatting) as usual
 # ...
