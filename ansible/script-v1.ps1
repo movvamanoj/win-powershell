@@ -4,6 +4,17 @@ $desiredDriveLetter = 'P'
 # Get all disks except the OS disk (Disk 0)
 $disks = Get-Disk | Where-Object { $_.Number -gt 0 }
 
+# Define a function to change drive letter
+function Change-DriveLetterTo {
+  param (
+    [Parameter(Mandatory = $true)]
+    [object] $partition,
+    [string] $newDriveLetter
+  )
+
+  Set-Partition -DriveLetter $newDriveLetter -Confirm:$false -InputObject $partition
+}
+
 # Loop through each disk
 foreach ($disk in $disks) {
   # Check for partitions with drive letter G
@@ -14,7 +25,7 @@ foreach ($disk in $disks) {
     Write-Host "Changing drive letter for disk $disk.Number from G to $desiredDriveLetter..."
 
     foreach ($partition in $disk.Partitions) {
-      Set-Partition -DriveLetter $desiredDriveLetter -Confirm:$false -InputObject $partition
+      Change-DriveLetterTo -partition $partition -newDriveLetter $desiredDriveLetter
     }
 
     Write-Host "Drive letter changed successfully."
