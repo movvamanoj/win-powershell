@@ -11,7 +11,6 @@ foreach ($driveLetter in $diskNumbersLetter[$diskNumber]) {
             }
         }
     }
-}
 
 # Specify the disk numbers
 $diskNumbers = (Get-Disk).Number
