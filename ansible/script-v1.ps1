@@ -26,29 +26,34 @@ function Get-NextAvailableDriveLetter {
 
 # Check if any disk has the letter "G" and update it to "P" in $diskNumbersLetter
 foreach ($diskNumber in $diskNumbers) {
-    $driveLetters = $diskNumbersLetter[$diskNumber]
+    # Check if $diskNumbersLetter has an entry for the current disk number
+    if ($diskNumbersLetter.ContainsKey($diskNumber)) {
+        $driveLetters = $diskNumbersLetter[$diskNumber]
 
-    # Check if "G" is present in the drive letters for the current disk
-    if (Test-DriveLetterGPresent -DriveLetters $driveLetters) {
-        foreach ($driveLetter in $driveLetters) {
-            if ($driveLetter -eq 'G') {
-                # Change the drive letter from "G" to "P" without formatting
-                Set-Partition -DriveLetter 'G' -NewDriveLetter 'P' -NoFormatting -Confirm:$false
+        # Check if "G" is present in the drive letters for the current disk
+        if (Test-DriveLetterGPresent -DriveLetters $driveLetters) {
+            foreach ($driveLetter in $driveLetters) {
+                if ($driveLetter -eq 'G') {
+                    # Change the drive letter from "G" to "P" without formatting
+                    Set-Partition -DriveLetter 'G' -NewDriveLetter 'P' -NoFormatting -Confirm:$false
 
-                # Update $diskNumbersLetter with the new drive letter
-                $diskNumbersLetter[$diskNumber] = $diskNumbersLetter[$diskNumber] -replace 'G', 'P'
+                    # Update $diskNumbersLetter with the new drive letter
+                    $diskNumbersLetter[$diskNumber] = $diskNumbersLetter[$diskNumber] -replace 'G', 'P'
 
-                # Output a message about the change
-                Write-Host "Drive letter for Disk $diskNumber changed from 'G' to 'P'. No formatting performed."
+                    # Output a message about the change
+                    Write-Host "Drive letter for Disk $diskNumber changed from 'G' to 'P'. No formatting performed."
+                }
             }
-        }
 
-        # Continue with the rest of the code for the specific disk
-        # You can add the remaining code here or call other functions as needed
-    }
-    else {
-        # Output a message indicating that "G" is not present for the current disk
-        Write-Host "Drive letter 'G' not present for Disk $diskNumber. Skipping modification and continuing with the rest of the code."
+            # Continue with the rest of the code for the specific disk
+            # You can add the remaining code here or call other functions as needed
+        } else {
+            # Output a message indicating that "G" is not present for the current disk
+            Write-Host "Drive letter 'G' not present for Disk $diskNumber. Skipping modification and continuing with the rest of the code."
+        }
+    } else {
+        # Output a message indicating that there is no entry for the current disk number
+        Write-Host "No entry found for Disk $diskNumber in $diskNumbersLetter. Skipping modification and continuing with the rest of the code."
     }
 }
 
