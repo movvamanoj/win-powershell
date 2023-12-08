@@ -7,7 +7,7 @@ $diskNumbersLetter = @{}
 # Function to get the next available drive letter
 function Get-NextAvailableDriveLetter {
     $usedDriveLetters = Get-Volume | Select-Object -ExpandProperty DriveLetter
-    $alphabet = 'D'#, 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'
+    $alphabet = 'G'#, 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'
 
     foreach ($letter in $alphabet) {
         if ($usedDriveLetters -notcontains $letter) {
@@ -29,6 +29,42 @@ function Test-DriveLetterInUse {
     return $usedDriveLetters -contains $DriveLetter
 }
 
+# Specify the desired drive letter
+$desiredDriveLetter = 'P'
+
+foreach ($diskNumber in $diskNumbers) {
+    # Skip Disk 0 (OS disk)
+    if ($diskNumber -eq 0) {
+        Write-Host "Skipping drive letter change for Disk 0 (OS disk)."
+        continue
+    }
+
+    # Check if the disk already has a drive letter G
+    if ($diskNumber -in $diskNumbersLetter.Keys -and 'G' -in $diskNumbersLetter[$diskNumber]) {
+        # Change drive letter from G to P
+        $partition = Get-Partition -DiskNumber $diskNumber | Where-Object { $_.DriveLetter -eq 'G' }
+
+        if ($partition) {
+            $partition | Set-Partition -NewDriveLetter $desiredDriveLetter
+            Write-Host "Drive letter on Disk $diskNumber changed from G to $desiredDriveLetter."
+            $diskNumbersLetter[$diskNumber] = $diskNumbersLetter[$diskNumber] -replace 'G', $desiredDriveLetter
+
+            # Refresh the disk information
+            $disk = Get-Disk -Number $diskNumber
+            if ($disk.IsOffline) {
+                Online-Disk -Number $diskNumber
+            }
+        }
+        else {
+            Write-Host "Partition with drive letter G not found on Disk $diskNumber. Skipping drive letter change."
+        }
+    }
+    else {
+        Write-Host "Disk $diskNumber does not have drive letter G. Skipping drive letter change."
+    }
+}
+
+# Continue with other processes (e.g., initialization, partition creation, formatting) as usual
 # ...
 
 # Check if each disk is already initialized and has a drive letter
@@ -58,27 +94,6 @@ foreach ($diskNumber in $diskNumbers) {
 
     # Add the disk number to the diskNumbersLetter with an empty array for drive letters
     $diskNumbersLetter[$diskNumber] = @()
-
-    # Check if the disk has drive letter G and change it to P
-    if ($diskNumber -in $diskNumbersLetter.Keys -and 'G' -in $diskNumbersLetter[$diskNumber]) {
-        # Change drive letter from G to P
-        $partition = Get-Partition -DiskNumber $diskNumber | Where-Object { $_.DriveLetter -eq 'G' }
-
-        if ($partition) {
-            $partition | Set-Partition -NewDriveLetter $desiredDriveLetter
-            Write-Host "Drive letter on Disk $diskNumber changed from G to $desiredDriveLetter."
-            $diskNumbersLetter[$diskNumber] = $diskNumbersLetter[$diskNumber] -replace 'G', $desiredDriveLetter
-
-            # Refresh the disk information
-            $disk = Get-Disk -Number $diskNumber
-            if ($disk.IsOffline) {
-                Online-Disk -Number $diskNumber
-            }
-        }
-        else {
-            Write-Host "Partition with drive letter G not found on Disk $diskNumber. Skipping drive letter change."
-        }
-    }
 }
 
 # Create a new partition on each disk with specific drive letters
