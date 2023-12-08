@@ -32,34 +32,26 @@ function Test-DriveLetterInUse {
     return $usedDriveLetters -contains $DriveLetter
 }
 
-# Check each available disk for a partition with drive letter G and change it to P
-foreach ($diskNumber in $diskNumbers) {
-    # Check if Disk has a partition with drive letter G
-    $partitionsOnDisk = Get-Partition -DiskNumber $diskNumber
+# Dynamically find the disk number with the drive letter G
+$diskNumberToChange = Get-Partition -DriveLetter 'G' | Select-Object -ExpandProperty DiskNumber
+
+if ($diskNumberToChange) {
+    # Change drive letter G to P for the partition on the dynamically determined disk
+    $partitionsOnDisk = Get-Partition -DiskNumber $diskNumberToChange
     $partitionWithDriveG = $partitionsOnDisk | Where-Object { $_.DriveLetter -eq 'G' }
 
     if ($partitionWithDriveG) {
-        # Change drive letter G to P for the partition on the current Disk
         $partitionWithDriveG | Set-Partition -NewDriveLetter $desiredDriveLetter -Confirm:$false
-        Write-Host "Drive letter on Disk $diskNumber changed from G to $desiredDriveLetter."
-        $diskNumbersLetter[$diskNumber] = $desiredDriveLetter
-
-        # Check if the volume is formatted, and if not, format it
-        $volume = Get-Volume -DriveLetter $desiredDriveLetter
-        if (-not $volume.FileSystem) {
-            Format-Volume -DriveLetter $desiredDriveLetter -FileSystem NTFS -NewFileSystemLabel "SC1CALLS" -AllocationUnitSize 65536 -Confirm:$false
-            Write-Host "Formatted volume with drive letter $desiredDriveLetter and label SC1CALLS."
-        }
-
-        break  # Stop checking after the first disk with drive letter G is found and updated
+        Write-Host "Drive letter on Disk $diskNumberToChange changed from G to $desiredDriveLetter."
+        $diskNumbersLetter[$diskNumberToChange] = $desiredDriveLetter
     }
     else {
-        Write-Host "Disk $diskNumber does not have drive letter G. Skipping drive letter change."
+        Write-Host "Disk $diskNumberToChange does not have drive letter G. Skipping drive letter change."
     }
 }
-
-# Continue with other processes (e.g., initialization, partition creation) as usual
-# ...
+else {
+    Write-Host "No disk found with drive letter G. Skipping drive letter change."
+}
 
 # Continue with other processes (e.g., initialization, partition creation, formatting) as usual
 # ...
