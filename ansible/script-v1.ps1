@@ -76,30 +76,20 @@ else {
     Write-Host "Disk $diskNumberToChange does not have drive letter G. Skipping drive letter change."
 }
 
-# Create a new partition on each disk with specific drive letters
+# Check for drive letter G and change it to P for all disks
 foreach ($diskNumber in $diskNumbers) {
-    # Skip Disk 0 (OS disk)
-    if ($diskNumber -eq 0) {
-        Write-Host "Skipping partition creation for Disk 0 (OS disk)."
-        continue
-    }
+    # Check if Disk has a partition with drive letter G
+    $partitionsOnDisk = Get-Partition -DiskNumber $diskNumber
+    $partitionWithDriveG = $partitionsOnDisk | Where-Object { $_.DriveLetter -eq 'G' }
 
-    # Skip if the disk already has a drive letter
-    if ($diskNumber -in $diskNumbersLetter.Keys -and $diskNumbersLetter[$diskNumber]) {
-        Write-Host "Skipping partition creation for Disk $diskNumber (Already has a drive letter)."
-        continue
-    }
-
-    $nextAvailableDriveLetter = Get-NextAvailableDriveLetter
-
-    # Check if the drive letter is already in use
-    if (Test-DriveLetterInUse -DiskNumber $diskNumber -DriveLetter $nextAvailableDriveLetter) {
-        Write-Host "Drive letter $nextAvailableDriveLetter is already in use for Disk $diskNumber. Skipping partition creation."
+    if ($partitionWithDriveG) {
+        # Change drive letter G to P for the partition on the current Disk
+        $partitionWithDriveG | Set-Partition -NewDriveLetter $desiredDriveLetter -Confirm:$false
+        Write-Host "Drive letter on Disk $diskNumber changed from G to $desiredDriveLetter."
+        $diskNumbersLetter[$diskNumber] = $desiredDriveLetter
     }
     else {
-        New-Partition -DiskNumber $diskNumber -UseMaximumSize -DriveLetter $nextAvailableDriveLetter
-        Write-Host "Partition on Disk $diskNumber created with drive letter $nextAvailableDriveLetter."
-        $diskNumbersLetter[$diskNumber] += $nextAvailableDriveLetter
+        Write-Host "Disk $diskNumber does not have drive letter G. Skipping drive letter change."
     }
 }
 
