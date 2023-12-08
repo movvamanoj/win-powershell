@@ -40,13 +40,13 @@ foreach ($diskNumber in $diskNumbers) {
         continue
     }
 
-    # Print drive letters before any changes
-    Write-Host "Drive letters on Disk $diskNumber before any changes: $($diskNumbersLetter[$diskNumber] -join ', ')"
+     # Print drive letters before attempting to change
+    Write-Host "Drive letters on Disk $diskNumber before change: $($diskNumbersLetter[$diskNumber] -join ', ')"
 
     # Check if the disk already has a drive letter G
     $partitionsOnDisk = Get-Partition -DiskNumber $diskNumber
     $partitionsInfo = $partitionsOnDisk | Select-Object DiskNumber, PartitionNumber, Size, DriveLetter, Type, FileSystem, Status | Format-Table | Out-String
-    Write-Host "Partitions on Disk $diskNumber: $($partitionsInfo)"
+    Write-Host ("Partitions on Disk {0}: {1}" -f $diskNumber, $partitionsInfo)
 
     if ($diskNumber -in $diskNumbersLetter.Keys -and 'G' -in $diskNumbersLetter[$diskNumber]) {
         # Change drive letter from G to P
