@@ -39,6 +39,9 @@ foreach ($diskNumber in $diskNumbers) {
         continue
     }
 
+    # Print drive letters before attempting to change
+    Write-Host "Drive letters on Disk $diskNumber before change: $($diskNumbersLetter[$diskNumber] -join ', ')"
+
     # Check if the disk already has a drive letter G
     if ($diskNumber -in $diskNumbersLetter.Keys -and 'G' -in $diskNumbersLetter[$diskNumber]) {
         # Change drive letter from G to P
@@ -62,10 +65,14 @@ foreach ($diskNumber in $diskNumbers) {
     else {
         Write-Host "Disk $diskNumber does not have drive letter G. Skipping drive letter change."
     }
+
+    # Print drive letters after the change
+    Write-Host "Drive letters on Disk $diskNumber after change: $($diskNumbersLetter[$diskNumber] -join ', ')"
 }
 
 # Continue with other processes (e.g., initialization, partition creation, formatting) as usual
 # ...
+
 
 # Check if each disk is already initialized and has a drive letter
 foreach ($diskNumber in $diskNumbers) {
