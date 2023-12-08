@@ -40,32 +40,17 @@ foreach ($diskNumber in $diskNumbers) {
         continue
     }
 
-     # Print drive letters before attempting to change
+    # Print drive letters before attempting to change
     Write-Host "Drive letters on Disk $diskNumber before change: $($diskNumbersLetter[$diskNumber] -join ', ')"
 
-    # Check if the disk already has a drive letter G
-    $partitionsOnDisk = Get-Partition -DiskNumber $diskNumber
-    $partitionsInfo = $partitionsOnDisk | Select-Object DiskNumber, PartitionNumber, Size, DriveLetter, Type, FileSystem, Status | Format-Table | Out-String
-    Write-Host ("Partitions on Disk {0}: {1}" -f $diskNumber, $partitionsInfo)
-
-    if ($diskNumber -in $diskNumbersLetter.Keys -and 'G' -in $diskNumbersLetter[$diskNumber]) {
-        # Change drive letter from G to P
-        $partition = $partitionsOnDisk | Where-Object { $_.DriveLetter -eq 'G' }
-
-        if ($partition) {
-            $partition | Set-Partition -NewDriveLetter $desiredDriveLetter
-            Write-Host "Drive letter on Disk $diskNumber changed from G to $desiredDriveLetter."
-            $diskNumbersLetter[$diskNumber] = $diskNumbersLetter[$diskNumber] -replace 'G', $desiredDriveLetter
-
-            # Refresh the disk information
-            $disk = Get-Disk -Number $diskNumber
-            if ($disk.IsOffline) {
-                Online-Disk -Number $diskNumber
-            }
+    # Check if the disk is Disk 1 and has a partition with any drive letter
+    if ($diskNumber -eq 1 -and $partitionsOnDisk.Count -gt 0) {
+        # Change drive letter to P for all partitions on Disk 1
+        $partitionsOnDisk | ForEach-Object {
+            $_ | Set-Partition -NewDriveLetter $desiredDriveLetter -Confirm:$false
         }
-        else {
-            Write-Host "Partition with drive letter G not found on Disk $diskNumber. Skipping drive letter change."
-        }
+        Write-Host "Drive letter on Disk $diskNumber changed to $desiredDriveLetter for all partitions."
+        $diskNumbersLetter[$diskNumber] = $desiredDriveLetter
     }
     else {
         Write-Host "Disk $diskNumber does not have drive letter G. Skipping drive letter change."
@@ -74,7 +59,6 @@ foreach ($diskNumber in $diskNumbers) {
     # Print drive letters after any changes
     Write-Host "Drive letters on Disk $diskNumber after any changes: $($diskNumbersLetter[$diskNumber] -join ', ')"
 }
-
 # Continue with other processes (e.g., initialization, partition creation, formatting) as usual
 # ...
 
