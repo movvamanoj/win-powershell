@@ -1,3 +1,6 @@
+# Specify the desired drive letter
+$desiredDriveLetter = 'P'
+
 # Specify the disk numbers
 $diskNumbers = (Get-Disk).Number
 
@@ -29,23 +32,25 @@ function Test-DriveLetterInUse {
     return $usedDriveLetters -contains $DriveLetter
 }
 
-# Specify the desired drive letter
-$desiredDriveLetter = 'P'
-
+# Check if each disk is already initialized and has a drive letter
 foreach ($diskNumber in $diskNumbers) {
     # Skip Disk 0 (OS disk)
     if ($diskNumber -eq 0) {
-        Write-Host "Skipping drive letter change for Disk 0 (OS disk)."
+        Write-Host "Skipping initialization for Disk 0 (OS disk)."
         continue
     }
 
-    # Print drive letters before attempting to change
-    Write-Host "Drive letters on Disk $diskNumber before change: $($diskNumbersLetter[$diskNumber] -join ', ')"
+    # Print drive letters before any changes
+    Write-Host "Drive letters on Disk $diskNumber before any changes: $($diskNumbersLetter[$diskNumber] -join ', ')"
 
     # Check if the disk already has a drive letter G
+    $partitionsOnDisk = Get-Partition -DiskNumber $diskNumber
+    $partitionsInfo = $partitionsOnDisk | Select-Object DiskNumber, PartitionNumber, Size, DriveLetter, Type, FileSystem, Status | Format-Table | Out-String
+    Write-Host "Partitions on Disk $diskNumber: $($partitionsInfo)"
+
     if ($diskNumber -in $diskNumbersLetter.Keys -and 'G' -in $diskNumbersLetter[$diskNumber]) {
         # Change drive letter from G to P
-        $partition = Get-Partition -DiskNumber $diskNumber | Where-Object { $_.DriveLetter -eq 'G' }
+        $partition = $partitionsOnDisk | Where-Object { $_.DriveLetter -eq 'G' }
 
         if ($partition) {
             $partition | Set-Partition -NewDriveLetter $desiredDriveLetter
@@ -66,15 +71,14 @@ foreach ($diskNumber in $diskNumbers) {
         Write-Host "Disk $diskNumber does not have drive letter G. Skipping drive letter change."
     }
 
-    # Print drive letters after the change
-    Write-Host "Drive letters on Disk $diskNumber after change: $($diskNumbersLetter[$diskNumber] -join ', ')"
+    # Print drive letters after any changes
+    Write-Host "Drive letters on Disk $diskNumber after any changes: $($diskNumbersLetter[$diskNumber] -join ', ')"
 }
 
 # Continue with other processes (e.g., initialization, partition creation, formatting) as usual
 # ...
 
-
-# Check if each disk is already initialized and has a drive letter
+# For example, initialization
 foreach ($diskNumber in $diskNumbers) {
     # Skip Disk 0 (OS disk)
     if ($diskNumber -eq 0) {
