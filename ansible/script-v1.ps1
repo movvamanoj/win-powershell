@@ -1,17 +1,3 @@
-# Modify the existing drive letter from G to P without formatting or data loss
-foreach ($driveLetter in $diskNumbersLetter[$diskNumber]) {
-        # Check if the drive letter is G
-     if ($driveLetter -eq 'G') {
-         Write-Host "Modifying drive letter for Disk $diskNumber from G to P without formatting..."
-         try {
-             Set-Partition -DriveLetter $driveLetter -NewDriveLetter 'P' -AssignDriveLetter $false -ErrorAction Stop
-             Write-Host "Drive letter for Disk $diskNumber modified from G to P without formatting."
-         } catch {
-             Write-Host "Failed to modify drive letter for Disk $diskNumber. $_"
-            }
-        }
-    }
-
 # Specify the disk numbers
 $diskNumbers = (Get-Disk).Number
 
@@ -21,7 +7,7 @@ $diskNumbersLetter = @{}
 # Function to get the next available drive letter
 function Get-NextAvailableDriveLetter {
     $usedDriveLetters = Get-Volume | Select-Object -ExpandProperty DriveLetter
-    $alphabet = 'G'
+    $alphabet = 'G' #, 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'
 
     foreach ($letter in $alphabet) {
         if ($usedDriveLetters -notcontains $letter) {
@@ -41,6 +27,22 @@ function Test-DriveLetterInUse {
 
     $usedDriveLetters = $diskNumbersLetter[$DiskNumber]
     return $usedDriveLetters -contains $DriveLetter
+}
+
+# Change drive letter 'G' to 'P' if it exists on any disk
+foreach ($diskNumber in $diskNumbers) {
+    if ('G' -in $diskNumbersLetter[$diskNumber]) {
+        $disk = Get-Disk -Number $diskNumber
+        $partition = Get-Partition -DiskId $disk.UniqueId | Where-Object { $_.DriveLetter -eq 'G' }
+        if ($partition) {
+            Set-Partition -UniqueId $partition.UniqueId -NewDriveLetter 'P'
+            Write-Host "Drive letter 'G' on Disk $diskNumber changed to 'P'."
+            
+            # Refresh the disk data after changing drive letters
+            $diskNumbersLetter[$diskNumber] = @()  # Clear existing drive letters
+            $diskNumbersLetter[$diskNumber] += 'P'  # Add 'P' as the new drive letter
+        }
+    }
 }
 
 # Check if each disk is already initialized and has a drive letter
