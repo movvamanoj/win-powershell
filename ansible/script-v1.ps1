@@ -39,8 +39,7 @@ foreach ($diskNumber in $diskNumbers) {
             Write-Host "Drive letter 'G' on Disk $diskNumber changed to 'P'."
             
             # Refresh the disk data after changing drive letters
-            $diskNumbersLetter[$diskNumber] = @()  # Clear existing drive letters
-            $diskNumbersLetter[$diskNumber] += 'P'  # Add 'P' as the new drive letter
+            $diskNumbersLetter[$diskNumber] = @('P')  # Update with the new drive letter 'P'
         }
     }
 }
