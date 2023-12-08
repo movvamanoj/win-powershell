@@ -7,7 +7,7 @@ $diskNumbersLetter = @{}
 # Function to get the next available drive letter
 function Get-NextAvailableDriveLetter {
     $usedDriveLetters = Get-Volume | Select-Object -ExpandProperty DriveLetter
-    $alphabet = 'G'
+    $alphabet = 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'
 
     foreach ($letter in $alphabet) {
         if ($usedDriveLetters -notcontains $letter) {
@@ -29,7 +29,7 @@ function Test-DriveLetterInUse {
     return $usedDriveLetters -contains $DriveLetter
 }
 
-# Check if there are disks with the drive letter G and change them to P
+# Check if there are disks with drive letter G and change them to P
 foreach ($diskNumber in $diskNumbers) {
     # Skip Disk 0 (OS disk)
     if ($diskNumber -eq 0) {
@@ -44,6 +44,13 @@ foreach ($diskNumber in $diskNumbers) {
         Set-Partition -DriveLetter 'G' -NewDriveLetter 'P' -NoFormatting -Confirm:$false
         $diskNumbersLetter[$diskNumber] = @('P')
     }
+}
+
+# Change the drive letter of Disk 2 to G if Disk 1's letter was changed to P
+if ($diskNumbersLetter[1] -contains 'P' -and $diskNumbersLetter[2] -notcontains 'G') {
+    Write-Host "Changing drive letter for Disk 2 from $diskNumbersLetter[2] to G."
+    Set-Partition -DriveLetter $diskNumbersLetter[2] -NewDriveLetter 'G' -NoFormatting -Confirm:$false
+    $diskNumbersLetter[2] = @('G')
 }
 
 
