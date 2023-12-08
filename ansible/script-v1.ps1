@@ -1,18 +1,10 @@
 # Specify the disk numbers
 $diskNumbers = (Get-Disk).Number
-
 # Create a hashtable to store allocated disk letters for each disk
 $diskNumbersLetter = @{}
-
-# Function to get the next available drive letter
+# Function to get the next available drive letter (always 'G')
 function Get-NextAvailableDriveLetter {
-    $usedDriveLetters = Get-Volume | Select-Object -ExpandProperty DriveLetter
-
-    if ($usedDriveLetters -notcontains 'G') {
-        return 'G'
-    }
-
-    throw "No available drive letters found."
+    return 'G'
 }
 
 # Loop through each disk number and check if 'G' is present in the drive letters
@@ -49,7 +41,7 @@ foreach ($diskNumber in $diskNumbers) {
     }
 }
 
-# Create a new partition on each disk with specific drive letters
+# Create a new partition on each disk with the drive letter 'G'
 foreach ($diskNumber in $diskNumbers) {
     if ($diskNumber -eq 0) {
         Write-Host "Skipping Disk 0 (OS disk)."
