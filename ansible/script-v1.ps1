@@ -1,25 +1,18 @@
-# Get information about volumes
-$volumes = Get-Volume
+# Get all volumes
+$volumes = Get-Volume -ErrorAction SilentlyContinue
 
-# Check if there is a volume with drive letter G
-$targetVolume = $volumes | Where-Object { $_.DriveLetter -eq 'G' }
+# Find the volume with DriveLetter G
+$gDrive = $volumes | Where-Object DriveLetter -eq "G"
 
-if ($targetVolume) {
-    # Check if the volume is formatted
-    if ($targetVolume.FileSystemType -ne 'RAW') {
-        try {
-            # Attempt to change the drive letter to P using Win32_Volume
-            $volume = Get-WmiObject Win32_Volume -Filter "DriveLetter = 'G'"
-            $volume.DriveLetter = 'P'
-            $volume.Put()
+# Check if the G drive exists
+if ($gDrive) {
+    # Get the disk number of the G drive
+    $diskNumber = $gDrive.DriveNumber
 
-            Write-Host "Drive letter changed from G to P successfully."
-        } catch {
-            Write-Host "Error changing drive letter: $_"
-        }
-    } else {
-        Write-Host "The volume is not formatted. Cannot change the drive letter."
-    }
+    # Change the drive letter to P
+    Set-Partition -DriveLetter "G" -NewDriveLetter "P" -DiskNumber $diskNumber
+
+    Write-Host "Successfully changed drive letter from G to P for disk number $diskNumber."
 } else {
-    Write-Host "No volume with drive letter G found."
+    Write-Host "Drive letter G is not assigned to any volume."
 }
