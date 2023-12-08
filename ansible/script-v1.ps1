@@ -10,7 +10,7 @@ $diskNumbersLetter = @{}
 # Function to get the next available drive letter
 function Get-NextAvailableDriveLetter {
     $usedDriveLetters = Get-Volume | Select-Object -ExpandProperty DriveLetter
-    $alphabet = 'G'#, 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'
+    $alphabet = 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'
 
     foreach ($letter in $alphabet) {
         if ($usedDriveLetters -notcontains $letter) {
@@ -43,12 +43,23 @@ foreach ($diskNumber in $diskNumbers) {
         $partitionWithDriveG | Set-Partition -NewDriveLetter $desiredDriveLetter -Confirm:$false
         Write-Host "Drive letter on Disk $diskNumber changed from G to $desiredDriveLetter."
         $diskNumbersLetter[$diskNumber] = $desiredDriveLetter
+
+        # Check if the volume is formatted, and if not, format it
+        $volume = Get-Volume -DriveLetter $desiredDriveLetter
+        if (-not $volume.FileSystem) {
+            Format-Volume -DriveLetter $desiredDriveLetter -FileSystem NTFS -NewFileSystemLabel "SC1CALLS" -AllocationUnitSize 65536 -Confirm:$false
+            Write-Host "Formatted volume with drive letter $desiredDriveLetter and label SC1CALLS."
+        }
+
         break  # Stop checking after the first disk with drive letter G is found and updated
     }
     else {
         Write-Host "Disk $diskNumber does not have drive letter G. Skipping drive letter change."
     }
 }
+
+# Continue with other processes (e.g., initialization, partition creation) as usual
+# ...
 
 # Continue with other processes (e.g., initialization, partition creation, formatting) as usual
 # ...
