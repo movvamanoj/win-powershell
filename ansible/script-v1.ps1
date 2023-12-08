@@ -32,7 +32,7 @@ function Test-DriveLetterInUse {
     return $usedDriveLetters -contains $DriveLetter
 }
 
-# Dynamically find the disk number with the drive letter G
+# Dynamically find the disk number with drive letter G
 $diskNumberToChange = Get-Partition -DriveLetter 'G' | Select-Object -ExpandProperty DiskNumber
 
 if ($diskNumberToChange) {
@@ -41,8 +41,9 @@ if ($diskNumberToChange) {
     $partitionWithDriveG = $partitionsOnDisk | Where-Object { $_.DriveLetter -eq 'G' }
 
     if ($partitionWithDriveG) {
-        $partitionWithDriveG | Set-Partition -NewDriveLetter $desiredDriveLetter -Confirm:$false
-        Write-Host "Drive letter on Disk $diskNumberToChange changed from G to $desiredDriveLetter."
+        # Change drive letter without formatting
+        Set-Partition -PartitionId $partitionWithDriveG.PartitionId -NewDriveLetter $desiredDriveLetter -AssignDriveLetter:$false -Confirm:$false
+        Write-Host "Drive letter on Disk $diskNumberToChange changed from G to $desiredDriveLetter without formatting."
         $diskNumbersLetter[$diskNumberToChange] = $desiredDriveLetter
     }
     else {
