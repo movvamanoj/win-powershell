@@ -24,13 +24,6 @@ function Get-NextAvailableDriveLetter {
     throw "No available drive letters found."
 }
 
-# Create a variable to store allocated disk letters along with their disk numbers
-$diskNumbersLetter = @{}
-
-# Check if any disk has the letter "G" and update it to "P" in $diskNumbersLetter
-foreach ($diskNumber in $diskNumbers) {
-    $driveLetters = $diskNumbersLetter[$diskNumber]
-
 # Check if any disk has the letter "G" and update it to "P" in $diskNumbersLetter
 foreach ($diskNumber in $diskNumbers) {
     $driveLetters = $diskNumbersLetter[$diskNumber]
@@ -49,6 +42,9 @@ foreach ($diskNumber in $diskNumbers) {
                 Write-Host "Drive letter for Disk $diskNumber changed from 'G' to 'P'. No formatting performed."
             }
         }
+
+        # Continue with the rest of the code for the specific disk
+        # You can add the remaining code here or call other functions as needed
     }
     else {
         # Output a message indicating that "G" is not present for the current disk
