@@ -1,24 +1,27 @@
 # Specify the disk numbers
 $diskNumbers = (Get-Disk).Number
 
+# Create a hashtable to store allocated disk letters for each disk
+$diskNumbersLetter = @{}
+
 # Function to get the next available drive letter
 function Get-NextAvailableDriveLetter {
     $usedDriveLetters = Get-Volume | Select-Object -ExpandProperty DriveLetter
-    $alphabet = 'G'
-    
-    foreach ($letter in $alphabet) {
-        if ($usedDriveLetters -notcontains $letter) {
-            return $letter
-        }
+
+    if ($usedDriveLetters -notcontains 'G') {
+        return 'G'
     }
 
     throw "No available drive letters found."
 }
 
-# ...
-
 # Loop through each disk number and check if 'G' is present in the drive letters
-foreach ($diskNumber in $diskNumbersLetter.Keys) {
+foreach ($diskNumber in $diskNumbers) {
+    if ($diskNumber -eq 0) {
+        Write-Host "Skipping Disk 0 (OS disk)."
+        continue
+    }
+
     $driveLetters = $diskNumbersLetter[$diskNumber]
 
     if ($driveLetters -contains 'G') {
@@ -46,13 +49,10 @@ foreach ($diskNumber in $diskNumbersLetter.Keys) {
     }
 }
 
-# ...
-
 # Create a new partition on each disk with specific drive letters
 foreach ($diskNumber in $diskNumbers) {
-    # Skip Disk 0 (OS disk)
     if ($diskNumber -eq 0) {
-        Write-Host "Skipping partition creation for Disk 0 (OS disk)."
+        Write-Host "Skipping Disk 0 (OS disk)."
         continue
     }
 
@@ -67,8 +67,7 @@ foreach ($diskNumber in $diskNumbers) {
     # Check if the drive letter is already in use
     if ($diskNumber -in $diskNumbersLetter.Keys -and $nextAvailableDriveLetter -in $diskNumbersLetter[$diskNumber]) {
         Write-Host "Drive letter $nextAvailableDriveLetter is already in use for Disk $diskNumber. Skipping partition creation."
-    }
-    else {
+    } else {
         New-Partition -DiskNumber $diskNumber -UseMaximumSize -DriveLetter $nextAvailableDriveLetter
         Write-Host "Partition on Disk $diskNumber created with drive letter $nextAvailableDriveLetter."
         $diskNumbersLetter[$diskNumber] += $nextAvailableDriveLetter
@@ -77,7 +76,6 @@ foreach ($diskNumber in $diskNumbers) {
 
 # Format the volumes with the NTFS file system and specific label
 foreach ($diskNumber in $diskNumbers) {
-    # Skip Disk 0 (OS disk)
     if ($diskNumber -eq 0) {
         Write-Host "Skipping formatting for Disk 0 (OS disk)."
         continue
@@ -88,8 +86,7 @@ foreach ($diskNumber in $diskNumbers) {
         if (Get-Partition -DiskNumber $diskNumber | Where-Object { $_.DriveLetter -eq $driveLetter }) {
             Format-Volume -DriveLetter $driveLetter -FileSystem NTFS -NewFileSystemLabel "SC1CALLS" -AllocationUnitSize 65536 -NoFormatting -Confirm:$false
             Write-Host "Formatted volume with drive letter $driveLetter and label SC1CALLS."
-        }
-        else {
+        } else {
             Write-Host "Partition with drive letter $driveLetter not found on Disk $diskNumber. Skipping formatting."
         }
     }
