@@ -42,7 +42,7 @@ if ($diskNumberToChange) {
 
     if ($partitionWithDriveG) {
         # Change drive letter without formatting
-        Set-Partition -PartitionId $partitionWithDriveG.PartitionId -NewDriveLetter $desiredDriveLetter -AssignDriveLetter:$false -Confirm:$false
+        Set-Partition -PartitionId $partitionWithDriveG.PartitionId -NewDriveLetter $desiredDriveLetter -AssignDriveLetter $false -Confirm:$false
         Write-Host "Drive letter on Disk $diskNumberToChange changed from G to $desiredDriveLetter without formatting."
         $diskNumbersLetter[$diskNumberToChange] = $desiredDriveLetter
     }
@@ -53,7 +53,6 @@ if ($diskNumberToChange) {
 else {
     Write-Host "No disk found with drive letter G. Skipping drive letter change."
 }
-
 # Continue with other processes (e.g., initialization, partition creation, formatting) as usual
 # ...
 
